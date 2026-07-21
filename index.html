@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Track</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --navy:#12233d;
+  --navy-2:#1c3459;
+  --blue:#2e6bd6;
+  --blue-light:#eaf1fd;
+  --ok:#1e9e6b;
+  --warn:#e0a324;
+  --crit:#d64545;
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --border:#e2e6ee;
+  --text:#1c2536;
+  --muted:#6b7690;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);}
+h1,h2,h3{margin:0 0 4px;}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:9px 16px;font-size:14px;font-weight:600;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:#2557b0;}
+.btn-secondary{background:#fff;color:var(--navy);border:1px solid var(--border);}
+.btn-secondary:hover{background:#f0f2f7;}
+.btn-danger{background:#fdecec;color:var(--crit);}
+.btn-danger:hover{background:#fadbdb;}
+.btn-ghost{background:transparent;color:var(--blue);padding:6px 8px;}
+input,select,textarea{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;width:100%;background:#fff;color:var(--text);}
+label{font-size:12.5px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px;}
+.field{margin-bottom:14px;}
+.hidden{display:none !important;}
+.screen{min-height:100vh;}
+/* Topbar */
+.topbar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--navy);color:#fff;}
+.topbar img{height:26px;}
+.topbar .title{font-weight:700;font-size:15px;letter-spacing:.2px;}
+/* Landing / Identification */
+.centered{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 54px);padding:24px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:0 1px 3px rgba(20,30,60,.06);}
+.id-card{max-width:420px;width:100%;text-align:left;}
+.id-card .logo-wrap{text-align:center;margin-bottom:18px;}
+.id-card .logo-wrap img{height:40px;}
+.id-card h1{font-size:20px;text-align:center;}
+.id-card p.sub{text-align:center;color:var(--muted);font-size:13.5px;margin-bottom:22px;}
+/* Portfolio */
+.portfolio-wrap{max-width:960px;margin:0 auto;padding:32px 24px;}
+.portfolio-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.portfolio-header p{color:var(--muted);margin:2px 0 0;}
+.actions-row{display:flex;gap:10px;}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:.15s;position:relative;}
+.project-card:hover{border-color:var(--blue);box-shadow:0 2px 10px rgba(46,107,214,.12);}
+.status-pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:8px;}
+.status-Ativo{background:#e6f6ee;color:var(--ok);}
+.status-Pausado{background:#fef3e0;color:var(--warn);}
+.status-Em.risco,.status-Emrisco{background:#fef3e0;color:var(--warn);}
+.status-Atrasado{background:#fdecec;color:var(--crit);}
+.status-Encerrado{background:#eef0f5;color:var(--muted);}
+.status-Cancelado{background:#eef0f5;color:var(--muted);}
+.footer-note{text-align:center;color:var(--muted);font-size:12px;margin-top:30px;}
+/* Project shell */
+.app-shell{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:var(--navy);color:#fff;flex-shrink:0;display:flex;flex-direction:column;padding:16px 0;}
+.sidebar .brand{display:flex;align-items:center;gap:8px;padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px;}
+.sidebar .brand img{height:22px;}
+.sidebar .brand span{font-weight:700;font-size:14px;}
+.sidebar .back{color:#b9c4de;font-size:12.5px;padding:10px 18px;text-decoration:none;cursor:pointer;}
+.sidebar .proj-name{padding:0 18px 14px;font-size:13px;color:#b9c4de;}
+.sidebar .proj-name b{display:block;color:#fff;font-size:14.5px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;color:#cdd6ea;font-size:13.5px;font-weight:600;cursor:pointer;border-left:3px solid transparent;}
+.nav-item:hover{background:rgba(255,255,255,.06);}
+.nav-item.active{background:rgba(255,255,255,.1);color:#fff;border-left-color:var(--blue);}
+.sidebar .save-note{margin-top:auto;padding:14px 18px;font-size:11px;color:#8592ad;}
+.main{flex:1;padding:26px 32px;max-width:1200px;}
+.pane{display:none;}
+.pane.active{display:block;}
+.pane-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.pane-header p{color:var(--muted);margin:4px 0 0;font-size:13.5px;}
+.empty-state{background:#fff;border:1px dashed var(--border);border-radius:var(--radius);padding:36px;text-align:center;color:var(--muted);}
+.empty-state h3{color:var(--text);}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--radius);overflow:hidden;}
+th,td{text-align:left;padding:10px 12px;font-size:13.5px;border-bottom:1px solid var(--border);}
+th{background:#f8f9fc;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;}
+tr:last-child td{border-bottom:none;}
+.table-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.chip-nao{background:#eef0f5;color:var(--muted);}
+.chip-prog{background:#eee7fb;color:#6a3fd6;}
+.chip-ok{background:#e6f6ee;color:var(--ok);}
+.chip-atraso{background:#fdecec;color:var(--crit);}
+.flag-btn{background:transparent;padding:2px 4px;font-size:15px;}
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,22,40,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal{background:#fff;border-radius:var(--radius);padding:26px;max-width:480px;width:100%;max-height:88vh;overflow-y:auto;}
+.modal h3{margin-bottom:16px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+/* Dashboard */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px;}
+.kpi-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.kpi-card h4{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin:0 0 10px;}
+.kpi-big{font-size:26px;font-weight:800;}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.semaforo{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;}
+.sg{background:var(--ok);}.sy{background:var(--warn);}.sr{background:var(--crit);}
+.section-block{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+.section-block h3{font-size:14.5px;margin-bottom:2px;}
+.section-block .desc{color:var(--muted);font-size:12.5px;margin-bottom:14px;}
+.gantt-row{display:flex;align-items:center;margin-bottom:6px;font-size:12.5px;}
+.gantt-label{width:180px;flex-shrink:0;padding-right:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gantt-track{flex:1;position:relative;height:20px;background:#f0f2f7;border-radius:4px;}
+.gantt-bar{position:absolute;top:2px;height:16px;border-radius:4px;}
+.bar-nao{background:#c7cede;}
+.bar-prog{background:#8a5cf0;}
+.bar-ok{background:var(--ok);}
+.bar-atraso{background:var(--crit);}
+.upload-box{border:2px dashed var(--border);border-radius:var(--radius);padding:26px;text-align:center;color:var(--muted);cursor:pointer;background:#fafbfd;}
+.upload-box:hover{border-color:var(--blue);}
+.file-hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+.risk-card,.note-card{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+.risk-card .meta,.note-card .meta{font-size:11.5px;color:var(--muted);margin-top:6px;}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-right:6px;}
+.tag-alta{background:#fdecec;color:var(--crit);}
+.tag-media{background:#fef3e0;color:var(--warn);}
+.tag-baixa{background:#eef0f5;color:var(--muted);}
+.instructions ol{padding-left:18px;}
+.instructions .step-block{margin-bottom:16px;}
+.danger-zone{border:1px solid #f5c9c9;background:#fff8f8;border-radius:var(--radius);padding:16px 18px;margin-top:24px;}
+.danger-zone h4{color:var(--crit);margin-bottom:6px;font-size:13px;}
+@media (max-width:800px){
+  .app-shell{flex-direction:column;}
+  .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;padding:10px;}
+  .sidebar .brand,.sidebar .back,.sidebar .proj-name{display:none;}
+  .nav-item{border-left:none;border-radius:6px;padding:8px 12px;}
+  .main{padding:18px;}
+}
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: IDENTIFICATION -->
+<div id="screen-id" class="screen">
+  <div class="topbar"><span class="title">Project Track</span></div>
+  <div class="centered">
+    <div class="card id-card">
+      <div class="logo-wrap"><div style="font-weight:800;font-size:22px;color:var(--navy)">OBLIANT</div></div>
+      <h1>Bem-vindo ao Project Track</h1>
+      <p class="sub">Ferramenta de gestão de projetos. Vamos identificar você primeiro.</p>
+      <div class="field">
+        <label>Seu nome completo</label>
+        <input id="input-name" type="text" placeholder="Ex: Maria Silva">
+      </div>
+      <div class="field">
+        <label>Cargo (opcional)</label>
+        <input id="input-role" type="text" placeholder="Ex: Gerente de Projetos">
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="submitIdentification()">Entrar no Project Track →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: PORTFOLIO -->
+<div id="screen-portfolio" class="screen hidden">
+  <div class="topbar"><span class="title">Project Track</span></div>
+  <div class="portfolio-wrap">
+    <div class="portfolio-header">
+      <div>
+        <h1>Portfólio de Projetos</h1>
+        <p>Selecione um projeto ou crie um novo.</p>
+      </div>
+      <div class="actions-row">
+        <button class="btn-secondary" onclick="loadSampleProject()">Carregar projeto de exemplo (dados fictícios)</button>
+        <button class="btn-primary" onclick="openModal('modal-new-project')">+ Novo projeto</button>
+      </div>
+    </div>
+    <div id="project-grid" class="project-grid"></div>
+    <p class="footer-note">Dados salvos localmente no navegador © Obliant</p>
+  </div>
+</div>
+
+<!-- SCREEN 3: PROJECT APP -->
+<div id="screen-project" class="screen hidden">
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="brand"><div style="font-weight:800;font-size:14px;color:#fff">OBLIANT</div><span>Project Track</span></div>
+      <a class="back" onclick="goToPortfolio()">↩ voltar ao portfólio</a>
+      <div class="proj-name">Projeto<b id="sidebar-proj-name">—</b></div>
+      <div class="nav-item" data-pane="instrucoes" onclick="showPane('instrucoes')">📘 Instruções de uso</div>
+      <div class="nav-item" data-pane="config" onclick="showPane('config')">⚙️ Configurar</div>
+      <div class="nav-item" data-pane="tarefas" onclick="showPane('tarefas')">✅ Tarefas</div>
+      <div class="nav-item" data-pane="cronograma" onclick="showPane('cronograma')">📅 Cronograma</div>
+      <div class="nav-item" data-pane="horas" onclick="showPane('horas')">🕐 Horas Consultores</div>
+      <div class="nav-item" data-pane="marcos" onclick="showPane('marcos')">🎯 Marcos</div>
+      <div class="nav-item" data-pane="notas" onclick="showPane('notas')">📝 Notas & Riscos</div>
+      <div class="nav-item" data-pane="dashboard" onclick="showPane('dashboard')">📊 Dashboard</div>
+      <div class="save-note">Dados salvos localmente</div>
+    </div>
+
+    <div class="main">
+
+      <!-- INSTRUCOES -->
+      <div class="pane instructions" id="pane-instrucoes">
+        <div class="pane-header"><div><h2>Instruções de uso</h2><p>Guia completo — Project Track · Portfólio de Projetos</p></div></div>
+        <div class="section-block">
+          <h3>🚀 Como começar um novo projeto</h3>
+          <div class="instructions">
+            <div class="step-block"><b>1. Criar o projeto</b> — Na tela inicial clique em <b>+ Novo projeto</b>, dê um nome e confirme.</div>
+            <div class="step-block"><b>2. Preencher Configurações</b> — Informe nome, cliente, gerente do projeto e datas de início e término.</div>
+            <div class="step-block"><b>3. Importar o cronograma</b> — No MS Project: Arquivo → Salvar Como → CSV (separador ponto-e-vírgula). Depois vá em Importar e selecione o arquivo.</div>
+            <div class="step-block"><b>4. Importar o forecast de horas</b> — Preencha o template de forecast, exporte como CSV e importe em Horas → Importar forecast.</div>
+            <div class="step-block"><b>5. Pronto!</b> — O Dashboard já mostra os indicadores. Agora é só atualizar conforme o projeto avança.</div>
+          </div>
+        </div>
+        <div class="section-block">
+          <h3>📅 Rotina de atualização</h3>
+          <p><b>Tarefas:</b> 🔘 Não iniciado → 0% automático · 🟣 Em progresso → % calculado pelas datas · 🟢 Concluído → 100% automático · 🔴 Em atraso → congela o % e sinaliza vermelho</p>
+          <p><b>Horas:</b> vá em Horas, selecione o mês e informe as horas realizadas de cada consultor. O dashboard atualiza automaticamente.</p>
+          <p><b>Marcos críticos:</b> em Tarefas, clique na bandeira 🚩 para marcar uma tarefa como marco crítico.</p>
+        </div>
+        <div class="section-block">
+          <h3>📊 Entenda os indicadores do Dashboard</h3>
+          <p><b>SPI</b> — % realizado ÷ % planejado. 🟢 ≥1.00 no ritmo · 🟡 0.85–1.00 leve atraso · 🔴 &lt;0.85 atraso crítico</p>
+          <p><b>CPI</b> — % entregue ÷ % de horas gastas. 🟢 ≥1.00 eficiente · 🟡 0.85–1.00 leve estouro · 🔴 &lt;0.85 estouro crítico</p>
+          <p><b>EAC</b> — projeção de horas/custo total mantido o ritmo atual.</p>
+        </div>
+      </div>
+
+      <!-- CONFIG -->
+      <div class="pane" id="pane-config">
+        <div class="pane-header"><div><h2>Configurações</h2><p>Dados gerais do projeto</p></div></div>
+        <div class="section-block">
+          <h3>Informações do projeto</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
+            <div class="field"><label>Nome do projeto</label><input id="cfg-name"></div>
+            <div class="field"><label>Cliente</label><input id="cfg-client"></div>
+            <div class="field"><label>Data de início</label><input id="cfg-start" type="date"></div>
+            <div class="field"><label>Data de término previsto</label><input id="cfg-end" type="date"></div>
+            <div class="field"><label>Gerente do projeto</label><input id="cfg-manager"></div>
+            <div class="field"><label>Status geral</label>
+              <select id="cfg-status"><option>Ativo</option><option>Pausado</option><option>Em risco</option><option>Atrasado</option><option>Encerrado</option><option>Cancelado</option></select>
+            </div>
+          </div>
+          <div class="field"><label>Observações</label><textarea id="cfg-notes" rows="3"></textarea></div>
+          <button class="btn-primary" onclick="saveConfig()">Salvar</button>
+        </div>
+        <div class="danger-zone">
+          <h4>Zona de perigo</h4>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Apaga todos os dados deste projeto. Não pode ser desfeito.</p>
+          <button class="btn-danger" onclick="clearProject()">Limpar este projeto</button>
+        </div>
+      </div>
+
+      <!-- TAREFAS -->
+      <div class="pane" id="pane-tarefas">
+        <div class="pane-header">
+          <div><h2>Tarefas</h2><p>Atualize o status — % calculado automaticamente</p></div>
+        </div>
+        <div class="toolbar">
+          <button class="btn-secondary" onclick="if(confirm('Limpar todas as tarefas?')){currentProject().tasks=[];saveAll();renderTarefas();}">Limpar tarefas</button>
+          <button class="btn-secondary" onclick="showPane('cronograma');document.getElementById('import-cronograma-box').scrollIntoView()">Importar cronograma</button>
+          <button class="btn-primary" onclick="openTaskModal()">+ Nova tarefa</button>
+        </div>
+        <div id="tarefas-content"></div>
+      </div>
+
+      <!-- CRONOGRAMA -->
+      <div class="pane" id="pane-cronograma">
+        <div class="pane-header"><div><h2>Cronograma</h2><p>Linha do tempo do projeto — Gantt por fase, colorido por status</p></div></div>
+        <div class="section-block" id="gantt-block">
+          <div id="gantt-content"></div>
+        </div>
+        <div class="section-block" id="import-cronograma-box">
+          <h3>Importar cronograma</h3>
+          <div class="desc">CSV exportado do MS Project</div>
+          <div class="upload-box" onclick="document.getElementById('file-cronograma').click()">
+            📂 Clique para selecionar o arquivo CSV ou arraste e solte aqui
+          </div>
+          <input type="file" id="file-cronograma" accept=".csv" class="hidden" onchange="handleCronogramaFile(event)">
+          <div class="file-hint">Como exportar do MS Project: Arquivo → Salvar Como → CSV (separador ponto-e-vírgula). Colunas: <b>WBS, Nome da tarefa, Duração, Início, Término</b>. Coluna <b>Status</b> é opcional: se existir, reconhece automaticamente — Concluído, Em progresso/Em andamento, Em atraso.</div>
+        </div>
+      </div>
+
+      <!-- HORAS -->
+      <div class="pane" id="pane-horas">
+        <div class="pane-header">
+          <div><h2>Horas Consultores</h2><p>Forecast × realizado por consultor</p></div>
+        </div>
+        <div class="toolbar">
+          <button class="btn-secondary" onclick="if(confirm('Limpar todos os consultores?')){currentProject().consultants=[];saveAll();renderHoras();}">Limpar consultores</button>
+          <button class="btn-secondary" onclick="document.getElementById('file-forecast').click()">Importar forecast</button>
+          <input type="file" id="file-forecast" accept=".csv" class="hidden" onchange="handleForecastFile(event)">
+          <button class="btn-primary" onclick="openConsultantModal()">+ Adicionar consultor</button>
+          <button class="btn-secondary" onclick="openLaunchHoursModal()">Lançar horas realizadas</button>
+        </div>
+        <div id="horas-content"></div>
+      </div>
+
+      <!-- MARCOS -->
+      <div class="pane" id="pane-marcos">
+        <div class="pane-header">
+          <div><h2>Marcos</h2><p>Entregas críticas</p></div>
+          <button class="btn-primary" onclick="openMilestoneModal()">+ Novo marco</button>
+        </div>
+        <div id="marcos-content"></div>
+      </div>
+
+      <!-- NOTAS -->
+      <div class="pane" id="pane-notas">
+        <div class="pane-header">
+          <div><h2>Notas & Riscos</h2><p>Anotações importantes e gestão de riscos do projeto</p></div>
+          <div class="actions-row">
+            <button class="btn-secondary" onclick="openRiskModal()">+ Novo risco</button>
+            <button class="btn-primary" onclick="openNoteModal()">+ Nova nota</button>
+          </div>
+        </div>
+        <div class="section-block"><h3>⚠️ Riscos identificados</h3><div id="risks-content"></div></div>
+        <div class="section-block"><h3>📝 Notas e comentários</h3><div id="notes-content"></div></div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="pane" id="pane-dashboard">
+        <div class="pane-header">
+          <div><h2>Dashboard</h2><p>Resumo do andamento geral do projeto hoje</p></div>
+          <button class="btn-secondary" onclick="exportReport()">Exportar relatório</button>
+        </div>
+        <div id="dashboard-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div id="modal-new-project" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Novo projeto</h3>
+    <div class="field"><label>Nome do projeto</label><input id="new-proj-name"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-new-project')">Cancelar</button>
+      <button class="btn-primary" onclick="createProject()">Criar projeto</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-task" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="task-modal-title">Nova tarefa</h3>
+    <input type="hidden" id="task-id">
+    <div class="field"><label>Nome</label><input id="task-name"></div>
+    <div class="field"><label>Fase</label><input id="task-phase"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="field"><label>Início planejado</label><input type="date" id="task-start"></div>
+      <div class="field"><label>Término planejado</label><input type="date" id="task-end"></div>
+    </div>
+    <div class="field"><label>Responsável</label><input id="task-resp"></div>
+    <div class="field"><label>Status</label>
+      <select id="task-status"><option>Não iniciado</option><option>Em progresso</option><option>Concluído</option><option>Em atraso</option></select>
+    </div>
+    <div class="field"><label>Observação</label><textarea id="task-note" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-task')">Cancelar</button>
+      <button class="btn-primary" onclick="saveTask()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-milestone" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Marco</h3>
+    <input type="hidden" id="ms-id">
+    <div class="field"><label>Nome</label><input id="ms-name"></div>
+    <div class="field"><label>Fase</label><input id="ms-phase"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="field"><label>Data planejada</label><input type="date" id="ms-planned"></div>
+      <div class="field"><label>Data realizada</label><input type="date" id="ms-actual"></div>
+    </div>
+    <div class="field"><label>Status</label>
+      <select id="ms-status"><option>Futuro</option><option>Em andamento</option><option>Concluído</option><option>Atrasado</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-milestone')">Cancelar</button>
+      <button class="btn-primary" onclick="saveMilestone()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-consultant" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Novo consultor</h3>
+    <input type="hidden" id="cons-id">
+    <div class="field"><label>Nome</label><input id="cons-name"></div>
+    <div class="field"><label>Perfil</label><input id="cons-profile"></div>
+    <div class="field"><label>Total de horas forecast</label><input type="number" id="cons-hours"></div>
+    <div class="field"><label>Valor / hora (R$)</label><input type="number" id="cons-value"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-consultant')">Cancelar</button>
+      <button class="btn-primary" onclick="saveConsultant()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-launch-hours" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Lançar horas realizadas</h3>
+    <div class="field"><label>Consultor</label><select id="launch-consultant"></select></div>
+    <div class="field"><label>Mês (AAAA-MM)</label><input type="month" id="launch-month"></div>
+    <div class="field"><label>Horas realizadas</label><input type="number" id="launch-hours"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-launch-hours')">Cancelar</button>
+      <button class="btn-primary" onclick="saveLaunchHours()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-risk" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Novo risco</h3>
+    <div class="field"><label>Descrição do risco</label><textarea id="risk-desc" rows="2"></textarea></div>
+    <div class="field"><label>Probabilidade</label><select id="risk-prob"><option>Alta</option><option>Média</option><option>Baixa</option></select></div>
+    <div class="field"><label>Impacto</label><select id="risk-impact"><option>Alto</option><option>Médio</option><option>Baixo</option></select></div>
+    <div class="field"><label>Status</label><select id="risk-status"><option>Identificado</option><option>Mitigando</option><option>Resolvido</option></select></div>
+    <div class="field"><label>Data de identificação</label><input type="date" id="risk-date"></div>
+    <div class="field"><label>Plano de ação</label><textarea id="risk-plan" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-risk')">Cancelar</button>
+      <button class="btn-primary" onclick="saveRisk()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-note" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Nova nota</h3>
+    <div class="field"><label>Nota / comentário</label><textarea id="note-text" rows="3"></textarea></div>
+    <div class="field"><label>Data</label><input type="date" id="note-date"></div>
+    <div class="field"><label>Categoria</label><select id="note-category"><option>Geral</option><option>Decisão</option><option>Reunião</option><option>Cliente</option></select></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-note')">Cancelar</button>
+      <button class="btn-primary" onclick="saveNote()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
