@@ -1809,21 +1809,24 @@ function renderTasks(){
     return '<div class="phase-block'+(((state.collapsedPhases||{})[fase])?' collapsed':'')+'" data-fase="'+encodeURIComponent(fase)+'"><div class="phase-header" onclick="togglePhase(this)"><span class="phase-title"><span class="phase-caret">▸</span>'+fase+(dataStr?' <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">'+dataStr+'</span>':'')+'</span>'
       +'<div class="phase-stats"><span>'+tasks.length+' tarefas</span><span>Plan: <strong>'+s.plan+'%</strong></span>'
       +'<span>Real: <strong style="color:'+(s.real>=s.plan?'var(--accent)':'var(--danger)')+'">'+s.real+'%</strong></span></div></div>'
-      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Prazo</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
+      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Início revisado</th><th>Prazo</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
       +'<tbody>'+tasks.map(function(t){
         var real=calcReal(t),plan=calcPlan(t);
         var color=real>=plan?'#52B788':t.status==='em-atraso'?'#EF4444':'#F59E0B';
-        var desvio=calcDesvio(t),desvioRef=t.fimEfetivo||t.fimRevisado;
-        var desvioHtml='<span style="color:var(--text3)">—</span>';
-        if(desvio!==null){
+        function desvioCell(desvio,ref,efetivoFlag){
+          if(desvio===null) return '<span style="color:var(--text3)">—</span>';
           var dColor=desvio>0?'var(--danger)':desvio<0?'var(--accent)':'var(--text2)';
           var dLabel=(desvio>0?'+':'')+desvio+'d';
-          desvioHtml='<span class="mono">'+fmtDate(desvioRef)+'</span> <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>'+(t.fimEfetivo?' <span style="color:var(--text3)">(efetivo)</span>':'');
+          return '<span class="mono">'+fmtDate(ref)+'</span> <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>'+(efetivoFlag?' <span style="color:var(--text3)">(efetivo)</span>':'');
         }
+        var iniHtml=desvioCell(calcDesvioInicio(t), t.inicioRevisado, false);
+        var fimHtml=desvioCell(calcDesvio(t), t.fimEfetivo||t.fimRevisado, !!t.fimEfetivo);
         return '<tr>'
           +'<td style="font-weight:500;max-width:200px">'+t.nome+'</td>'
-          +'<td class="mono">'+fmtDate(t.ini)+'</td><td class="mono">'+fmtDate(t.fim)+'</td>'
-          +'<td style="white-space:nowrap;font-size:12px">'+desvioHtml+'</td>'
+          +'<td class="mono">'+fmtDate(t.ini)+'</td>'
+          +'<td style="white-space:nowrap;font-size:12px">'+iniHtml+'</td>'
+          +'<td class="mono">'+fmtDate(t.fim)+'</td>'
+          +'<td style="white-space:nowrap;font-size:12px">'+fimHtml+'</td>'
           +'<td class="mono">'+(t.dur||'—')+'d</td><td style="color:var(--text2)">'+(t.resp||'—')+'</td>'
           +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+plan+'%;background:#B5D4F4"></div></div><span class="mono" style="min-width:28px">'+plan+'%</span></div></td>'
           +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+real+'%;background:'+color+'"></div></div><span class="mono" style="min-width:28px">'+real+'%</span></div></td>'
@@ -1917,14 +1920,15 @@ function updateTaskStatus(id,val,sel){
   renderTasks();
 }
 
-// Deviation between the original planned end date and the revised/actual one.
+// Deviation in days between a planned date and its revised/actual counterpart.
 // Returns null when there's nothing to compare yet (task still on the original plan).
-function calcDesvio(t){
-  var ref=t.fimEfetivo||t.fimRevisado;
-  if(!ref||!t.fim) return null;
-  var d1=new Date(t.fim+'T00:00:00'),d2=new Date(ref+'T00:00:00');
+function calcDesvioDias(planejado,revisado){
+  if(!planejado||!revisado) return null;
+  var d1=new Date(planejado+'T00:00:00'),d2=new Date(revisado+'T00:00:00');
   return Math.round((d2-d1)/86400000);
 }
+function calcDesvio(t){ return calcDesvioDias(t.fim, t.fimEfetivo||t.fimRevisado); }
+function calcDesvioInicio(t){ return calcDesvioDias(t.ini, t.inicioRevisado); }
 
 var editingTaskId=null;
 function calcDuracao(){
