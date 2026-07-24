@@ -1809,7 +1809,7 @@ function renderTasks(){
     return '<div class="phase-block'+(((state.collapsedPhases||{})[fase])?' collapsed':'')+'" data-fase="'+encodeURIComponent(fase)+'"><div class="phase-header" onclick="togglePhase(this)"><span class="phase-title"><span class="phase-caret">▸</span>'+fase+(dataStr?' <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">'+dataStr+'</span>':'')+'</span>'
       +'<div class="phase-stats"><span>'+tasks.length+' tarefas</span><span>Plan: <strong>'+s.plan+'%</strong></span>'
       +'<span>Real: <strong style="color:'+(s.real>=s.plan?'var(--accent)':'var(--danger)')+'">'+s.real+'%</strong></span></div></div>'
-      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Término</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
+      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Prazo</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
       +'<tbody>'+tasks.map(function(t){
         var real=calcReal(t),plan=calcPlan(t);
         var color=real>=plan?'#52B788':t.status==='em-atraso'?'#EF4444':'#F59E0B';
