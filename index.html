@@ -773,6 +773,11 @@ textarea{resize:vertical;min-height:60px}
       <div class="form-group"><label>Responsável</label><input type="text" id="t-resp" autocomplete="off"></div>
       <div class="form-group"><label>Observação</label><input type="text" id="t-obs" autocomplete="off"></div>
     </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Início revisado</label><input type="date" id="t-ini-rev"></div>
+      <div class="form-group"><label>Término revisado</label><input type="date" id="t-fim-rev"></div>
+      <div class="form-group"><label>Término efetivo</label><input type="date" id="t-fim-efetivo"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-task')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveTask()">Salvar</button>
@@ -1804,13 +1809,21 @@ function renderTasks(){
     return '<div class="phase-block'+(((state.collapsedPhases||{})[fase])?' collapsed':'')+'" data-fase="'+encodeURIComponent(fase)+'"><div class="phase-header" onclick="togglePhase(this)"><span class="phase-title"><span class="phase-caret">▸</span>'+fase+(dataStr?' <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">'+dataStr+'</span>':'')+'</span>'
       +'<div class="phase-stats"><span>'+tasks.length+' tarefas</span><span>Plan: <strong>'+s.plan+'%</strong></span>'
       +'<span>Real: <strong style="color:'+(s.real>=s.plan?'var(--accent)':'var(--danger)')+'">'+s.real+'%</strong></span></div></div>'
-      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Término</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
+      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Término</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
       +'<tbody>'+tasks.map(function(t){
         var real=calcReal(t),plan=calcPlan(t);
         var color=real>=plan?'#52B788':t.status==='em-atraso'?'#EF4444':'#F59E0B';
+        var desvio=calcDesvio(t),desvioRef=t.fimEfetivo||t.fimRevisado;
+        var desvioHtml='<span style="color:var(--text3)">—</span>';
+        if(desvio!==null){
+          var dColor=desvio>0?'var(--danger)':desvio<0?'var(--accent)':'var(--text2)';
+          var dLabel=(desvio>0?'+':'')+desvio+'d';
+          desvioHtml='<span class="mono">'+fmtDate(desvioRef)+'</span> <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>'+(t.fimEfetivo?' <span style="color:var(--text3)">(efetivo)</span>':'');
+        }
         return '<tr>'
           +'<td style="font-weight:500;max-width:200px">'+t.nome+'</td>'
           +'<td class="mono">'+fmtDate(t.ini)+'</td><td class="mono">'+fmtDate(t.fim)+'</td>'
+          +'<td style="white-space:nowrap;font-size:12px">'+desvioHtml+'</td>'
           +'<td class="mono">'+(t.dur||'—')+'d</td><td style="color:var(--text2)">'+(t.resp||'—')+'</td>'
           +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+plan+'%;background:#B5D4F4"></div></div><span class="mono" style="min-width:28px">'+plan+'%</span></div></td>'
           +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+real+'%;background:'+color+'"></div></div><span class="mono" style="min-width:28px">'+real+'%</span></div></td>'
@@ -1886,7 +1899,10 @@ function removeComentario(id,idx){
 
 function updateTaskStatus(id,val,sel){
   var t=state.tasks.find(function(t){return t.id===id;}); if(!t) return;
-  t.status=val; sel.className='status-select status-'+val;
+  t.status=val;
+  // Auto-capture revised/actual dates on status transitions (only if not already set)
+  if(val==='em-progresso' && !t.inicioRevisado) t.inicioRevisado=today();
+  if(val==='concluido' && !t.fimEfetivo) t.fimEfetivo=today();
   // Sync linked marco status
   if(t.isMarco){
     var m=state.marcos.find(function(m){return m.taskId===id;});
@@ -1897,12 +1913,17 @@ function updateTaskStatus(id,val,sel){
       else m.status='future';
     }
   }
-  var row=sel.closest('tr'),real=calcReal(t),plan=calcPlan(t);
-  var color=real>=plan?'#52B788':val==='em-atraso'?'#EF4444':'#F59E0B';
-  var cells=row.querySelectorAll('td');
-  cells[5].innerHTML='<div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+plan+'%;background:#B5D4F4"></div></div><span class="mono" style="min-width:28px">'+plan+'%</span></div>';
-  cells[6].innerHTML='<div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+real+'%;background:'+color+'"></div></div><span class="mono" style="min-width:28px">'+real+'%</span></div>';
   save();
+  renderTasks();
+}
+
+// Deviation between the original planned end date and the revised/actual one.
+// Returns null when there's nothing to compare yet (task still on the original plan).
+function calcDesvio(t){
+  var ref=t.fimEfetivo||t.fimRevisado;
+  if(!ref||!t.fim) return null;
+  var d1=new Date(t.fim+'T00:00:00'),d2=new Date(ref+'T00:00:00');
+  return Math.round((d2-d1)/86400000);
 }
 
 var editingTaskId=null;
@@ -1919,7 +1940,7 @@ function calcDuracao(){
 function openAddTask(){
   editingTaskId=null;
   document.getElementById('modal-task-title').textContent='Nova tarefa';
-  ['t-nome','t-fase','t-ini','t-fim','t-resp','t-obs'].forEach(function(id){document.getElementById(id).value='';});
+  ['t-nome','t-fase','t-ini','t-fim','t-resp','t-obs','t-ini-rev','t-fim-rev','t-fim-efetivo'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('t-dur').value='';
   var dl=document.getElementById('fases-list');
   dl.innerHTML=getFases().map(function(f){return '<option value="'+f+'">';}).join('');
@@ -1936,6 +1957,9 @@ function editTask(id){
   document.getElementById('t-dur').value=t.dur||'';
   document.getElementById('t-resp').value=t.resp||'';
   document.getElementById('t-obs').value=t.obs||'';
+  document.getElementById('t-ini-rev').value=t.inicioRevisado||'';
+  document.getElementById('t-fim-rev').value=t.fimRevisado||'';
+  document.getElementById('t-fim-efetivo').value=t.fimEfetivo||'';
   document.getElementById('modal-task').classList.add('open');
 }
 function saveTask(){
@@ -1945,11 +1969,14 @@ function saveTask(){
     ini:document.getElementById('t-ini').value,fim:document.getElementById('t-fim').value,
     dur:parseInt(document.getElementById('t-dur').value)||1,
     resp:document.getElementById('t-resp').value.trim(),
-    obs:document.getElementById('t-obs').value.trim(),status:'nao-iniciado'};
+    obs:document.getElementById('t-obs').value.trim(),
+    inicioRevisado:document.getElementById('t-ini-rev').value,
+    fimRevisado:document.getElementById('t-fim-rev').value,
+    fimEfetivo:document.getElementById('t-fim-efetivo').value};
   if(editingTaskId){
     var idx=state.tasks.findIndex(function(t){return t.id===editingTaskId;});
     if(idx>=0) state.tasks[idx]=Object.assign(state.tasks[idx],obj);
-  } else { obj.id=state.nextId++; state.tasks.push(obj); }
+  } else { obj.status='nao-iniciado'; obj.id=state.nextId++; state.tasks.push(obj); }
   save(); closeModal('modal-task'); renderTasks(); toast(editingTaskId?'Tarefa atualizada':'Tarefa adicionada');
 }
 function deleteTask(id){
