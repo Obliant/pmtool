@@ -757,6 +757,19 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- MODALS -->
+<div class="overlay" id="modal-comentarios">
+  <div class="modal">
+    <h3 id="modal-comentarios-title">Comentários</h3>
+    <div style="margin-bottom:12px">
+      <input type="text" id="cmt-modal-input" placeholder="Comentário + Enter para salvar..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addComentario(comentarioTaskId);}">
+    </div>
+    <div id="modal-comentarios-list" style="font-size:12px;background:var(--bg);border-radius:8px;padding:8px 10px;line-height:2;max-height:340px;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-comentarios')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-task">
   <div class="modal">
     <h3 id="modal-task-title">Nova tarefa</h3>
@@ -1853,11 +1866,36 @@ function togglePhase(headerEl){
 var expandedTasks={};
 function toggleTaskExpand(id){ expandedTasks[id]=!expandedTasks[id]; renderTasks(); }
 
-function desvioCellHtml(desvio,ref,efetivoFlag){
-  if(desvio===null) return '<span style="color:var(--text3)">—</span>';
+// Original date + revised/actual delta stacked in one cell, instead of two
+// side-by-side columns. Exact revised date is in the tooltip / edit modal —
+// at a glance, the day-count delta is what matters.
+function dateCellHtml(original,revisedRef,desvio,efetivoFlag){
+  var out='<div class="mono">'+fmtDate(original)+'</div>';
+  if(desvio===null) return out;
   var dColor=desvio>0?'var(--danger)':desvio<0?'var(--accent)':'var(--text2)';
   var dLabel=(desvio>0?'+':'')+desvio+'d';
-  return '<span class="mono">'+fmtDate(ref)+'</span> <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>'+(efetivoFlag?' <span style="color:var(--text3)">(efetivo)</span>':'');
+  out+='<div style="font-size:10px;color:'+dColor+';font-weight:600" title="'+(efetivoFlag?'Efetivo':'Revisado')+': '+fmtDate(revisedRef)+'">'+dLabel+(efetivoFlag?' ✓':'')+'</div>';
+  return out;
+}
+
+// % Real as the main bar (with a tick marking where % Plan should be) instead
+// of two separate progress bars competing for attention.
+function progressCellHtml(plan,real,color){
+  return '<div style="min-width:76px">'
+    +'<div style="position:relative;height:6px;background:var(--surface2);border-radius:3px">'
+    +'<div style="height:100%;width:'+real+'%;background:'+color+';border-radius:3px"></div>'
+    +'<div style="position:absolute;left:'+plan+'%;top:-2px;width:2px;height:10px;background:var(--text);opacity:.4" title="Planejado: '+plan+'%"></div>'
+    +'</div>'
+    +'<div class="mono" style="font-size:11px;margin-top:3px">'+real+'% <span style="color:var(--text3);font-weight:400">(plan '+plan+'%)</span></div>'
+    +'</div>';
+}
+
+function commentsBtnHtml(t){
+  var n=(t.comentarios||[]).length;
+  return '<button class="btn btn-sm btn-icon" onclick="openComentarios('+t.id+')" title="Comentários ('+n+')" style="margin-right:2px;position:relative;color:'+(n?'var(--accent)':'var(--text3)')+'">'
+    +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>'
+    +(n?'<span style="position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;border-radius:50%;font-size:9px;width:14px;height:14px;display:flex;align-items:center;justify-content:center;line-height:1">'+n+'</span>':'')
+    +'</button>';
 }
 
 function renderTaskRow(t,isSub){
@@ -1865,11 +1903,11 @@ function renderTaskRow(t,isSub){
   var real=calcReal(t),plan=calcPlan(t);
   var effStatus=getEffectiveStatus(t);
   var color=real>=plan?'#52B788':effStatus==='em-atraso'?'#EF4444':'#F59E0B';
-  var iniHtml=desvioCellHtml(calcDesvioInicio(t), getInicioRevisadoRef(t), false);
-  var fimHtml=desvioCellHtml(calcDesvio(t), getFimRevisadoRef(t), isFimEfetivo(t));
+  var iniHtml=dateCellHtml(t.ini, getInicioRevisadoRef(t), calcDesvioInicio(t), false);
+  var fimHtml=dateCellHtml(t.fim, getFimRevisadoRef(t), calcDesvio(t), isFimEfetivo(t));
   var nomeCell=kids.length
     ? '<span onclick="toggleTaskExpand('+t.id+')" style="cursor:pointer;display:inline-block;width:14px;color:var(--text2)">'+(expandedTasks[t.id]?'▾':'▸')+'</span>'+t.nome+' <span style="color:var(--text3);font-weight:400;font-size:11px">('+kids.length+')</span>'
-    : (isSub?'<span style="display:inline-block;width:14px"></span>':'<span style="display:inline-block;width:14px"></span>')+t.nome;
+    : '<span style="display:inline-block;width:14px"></span>'+t.nome;
   var statusCell=kids.length
     ? '<span class="mono" style="font-size:12px;color:var(--text2)">'+kids.filter(function(k){return k.status==='concluido';}).length+'/'+kids.length+' concluídas</span>'
     : '<select class="status-select status-'+t.status+'" onchange="updateTaskStatus('+t.id+',this.value,this)">'
@@ -1880,18 +1918,12 @@ function renderTaskRow(t,isSub){
   var addSubBtn=isSub?'':'<button class="btn btn-sm btn-icon" onclick="openAddSubtask('+t.id+')" title="Adicionar subtarefa" style="margin-right:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
   var row='<tr'+(isSub?' style="background:var(--bg)"':'')+'>'
     +'<td style="font-weight:'+(isSub?'400':'500')+';max-width:200px;padding-left:'+(isSub?'32px':'12px')+'">'+nomeCell+'</td>'
-    +'<td class="mono">'+fmtDate(t.ini)+'</td>'
-    +'<td style="white-space:nowrap;font-size:12px">'+iniHtml+'</td>'
-    +'<td class="mono">'+fmtDate(t.fim)+'</td>'
-    +'<td style="white-space:nowrap;font-size:12px">'+fimHtml+'</td>'
+    +'<td style="white-space:nowrap">'+iniHtml+'</td>'
+    +'<td style="white-space:nowrap">'+fimHtml+'</td>'
     +'<td class="mono">'+(t.dur||'—')+'d</td><td style="color:var(--text2)">'+(t.resp||'—')+'</td>'
-    +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+plan+'%;background:#B5D4F4"></div></div><span class="mono" style="min-width:28px">'+plan+'%</span></div></td>'
-    +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+real+'%;background:'+color+'"></div></div><span class="mono" style="min-width:28px">'+real+'%</span></div></td>'
+    +'<td>'+progressCellHtml(plan,real,color)+'</td>'
     +'<td>'+statusCell+'</td>'
-    +'<td style="min-width:200px;max-width:260px"><div style="margin-bottom:'+(((t.comentarios||[]).length)?'6px':'0')+'"><input type="text" id="cmt-'+t.id+'" placeholder="Comentário + Enter para salvar..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();addComentario('+t.id+');}" style="width:100%;padding:4px 8px;font-size:12px;border:1px solid var(--border-md);border-radius:6px;background:var(--bg);color:var(--text);font-family:\'DM Sans\',sans-serif;outline:none" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border-md)\'"></div>'
-    +(((t.comentarios||[]).length)?'<div style="font-size:11px;background:var(--bg);border-radius:6px;padding:6px 8px;line-height:2">'+(t.comentarios||[]).slice().reverse().map(function(c,ci){var realIdx=(t.comentarios.length-1-ci);var riscado=c.riscado||false;return '<div style="display:flex;align-items:baseline;gap:4px"><span style="color:var(--text3);font-family:\'DM Mono\',monospace;white-space:nowrap">'+c.data+'</span> <span onclick="editComentario('+t.id+','+realIdx+',this)" style="flex:1;color:'+(riscado?'var(--text3)':'var(--text)')+';cursor:pointer;border-bottom:1px dashed var(--border-md);text-decoration:'+(riscado?'line-through':'none')+'" title="Clique para editar">'+c.texto+'</span><button onclick="toggleRiscarComentario('+t.id+','+realIdx+')" title="Riscar" style="background:none;border:none;cursor:pointer;color:'+(riscado?'var(--accent)':'var(--text3)')+';font-size:11px;padding:0;line-height:1;flex-shrink:0">S̶</button><button onclick="removeComentario('+t.id+','+realIdx+')" title="Excluir" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0;line-height:1;flex-shrink:0">✕</button></div>';}).join('')+'</div>':'')
-    +'</td>'
-    +'<td style="white-space:nowrap">'+addSubBtn
+    +'<td style="white-space:nowrap">'+addSubBtn+commentsBtnHtml(t)
     +'<button class="btn btn-sm btn-icon" onclick="toggleMarco('+t.id+')" title="'+(t.isMarco?'Remover marco':'Marcar como marco')+'" style="margin-right:2px;color:'+(t.isMarco?'var(--warn)':'var(--text3)')+';opacity:'+(t.isMarco?'1':'.4')+'">'
     +'<svg width="13" height="13" viewBox="0 0 24 24" fill="'+(t.isMarco?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>'
     +'<button class="btn btn-sm btn-icon" onclick="editTask('+t.id+')" title="Editar tarefa" style="margin-right:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
@@ -1916,13 +1948,36 @@ function renderTasks(){
     return '<div class="phase-block'+(((state.collapsedPhases||{})[fase])?' collapsed':'')+'" data-fase="'+encodeURIComponent(fase)+'"><div class="phase-header" onclick="togglePhase(this)"><span class="phase-title"><span class="phase-caret">▸</span>'+fase+(dataStr?' <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">'+dataStr+'</span>':'')+'</span>'
       +'<div class="phase-stats"><span>'+tasks.length+' tarefas</span><span>Plan: <strong>'+s.plan+'%</strong></span>'
       +'<span>Real: <strong style="color:'+(s.real>=s.plan?'var(--accent)':'var(--danger)')+'">'+s.real+'%</strong></span></div></div>'
-      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Início revisado</th><th>Prazo</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
+      +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Prazo</th><th>Dur.</th><th>Responsável</th><th>Progresso</th><th>Status</th><th></th></tr></thead>'
       +'<tbody>'+tasks.map(function(t){ return renderTaskRow(t,false); }).join('')+'</tbody></table></div></div>';
   }).join('');
 }
 
+// Comments now live in a shared modal instead of inline per-row — keeps the
+// tasks table compact regardless of how many comments a task accumulates.
+var comentarioTaskId=null;
+function openComentarios(id){
+  var t=state.tasks.find(function(t){return t.id===id;}); if(!t) return;
+  comentarioTaskId=id;
+  document.getElementById('modal-comentarios-title').textContent='Comentários — '+t.nome;
+  document.getElementById('cmt-modal-input').value='';
+  renderComentariosModal();
+  document.getElementById('modal-comentarios').classList.add('open');
+  document.getElementById('cmt-modal-input').focus();
+}
+function renderComentariosModal(){
+  var t=state.tasks.find(function(t){return t.id===comentarioTaskId;}); if(!t) return;
+  var list=document.getElementById('modal-comentarios-list');
+  var coms=t.comentarios||[];
+  if(!coms.length){ list.innerHTML='<span style="color:var(--text3)">Nenhum comentário ainda.</span>'; return; }
+  list.innerHTML=coms.slice().reverse().map(function(c,ci){
+    var realIdx=(coms.length-1-ci),riscado=c.riscado||false;
+    return '<div style="display:flex;align-items:baseline;gap:4px"><span style="color:var(--text3);font-family:\'DM Mono\',monospace;white-space:nowrap">'+c.data+'</span> <span onclick="editComentario('+t.id+','+realIdx+',this)" style="flex:1;color:'+(riscado?'var(--text3)':'var(--text)')+';cursor:pointer;border-bottom:1px dashed var(--border-md);text-decoration:'+(riscado?'line-through':'none')+'" title="Clique para editar">'+c.texto+'</span><button onclick="toggleRiscarComentario('+t.id+','+realIdx+')" title="Riscar" style="background:none;border:none;cursor:pointer;color:'+(riscado?'var(--accent)':'var(--text3)')+';font-size:11px;padding:0;line-height:1;flex-shrink:0">S̶</button><button onclick="removeComentario('+t.id+','+realIdx+')" title="Excluir" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0;line-height:1;flex-shrink:0">✕</button></div>';
+  }).join('');
+}
+
 function addComentario(id){
-  var input=document.getElementById('cmt-'+id);
+  var input=document.getElementById('cmt-modal-input');
   if(!input) return;
   var texto=input.value.trim();
   if(!texto) return;
@@ -1931,6 +1986,7 @@ function addComentario(id){
   t.comentarios.push({data:new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}),texto:texto});
   input.value='';
   save();
+  renderComentariosModal();
   renderTasks();
 }
 
@@ -1948,21 +2004,22 @@ function editComentario(taskId, idx, el){
     var novo=input.value.trim();
     if(novo) c.texto=novo;
     save();
+    renderComentariosModal();
     renderTasks();
   }
   input.addEventListener('keydown',function(e){
     if(e.key==='Enter'){e.preventDefault();salvar();}
-    if(e.key==='Escape'){renderTasks();}
+    if(e.key==='Escape'){renderComentariosModal();}
   });
   input.addEventListener('blur', salvar);
 }
-
 
 function toggleRiscarComentario(id,idx){
   var t=state.tasks.find(function(t){return t.id===id;}); if(!t) return;
   if(!t.comentarios||!t.comentarios[idx]) return;
   t.comentarios[idx].riscado=!t.comentarios[idx].riscado;
   save();
+  renderComentariosModal();
   renderTasks();
 }
 
@@ -1971,6 +2028,7 @@ function removeComentario(id,idx){
   if(!t.comentarios) return;
   t.comentarios.splice(idx,1);
   save();
+  renderComentariosModal();
   renderTasks();
 }
 
