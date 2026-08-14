@@ -1433,12 +1433,18 @@ function calcReal(t){
   if(t.status==='concluido') return 100;
   if(t.status==='nao-iniciado') return 0;
   if(!t.ini||!t.fim) return t.status==='em-atraso'?30:50;
-  var ini=new Date(t.ini),fim=new Date(t.fim),tod=new Date(today());
+  // % Real tracks time elapsed against the REVISED window (when set), not the
+  // original baseline — otherwise a task that only really started long after
+  // its planned date reads as artificially "on track" or even 100% done.
+  var iniEff=t.inicioRevisado||t.ini, fimEff=t.fimRevisado||t.fim;
+  var ini=new Date(iniEff),fim=new Date(fimEff),tod=new Date(today());
   var total=(fim-ini)/86400000;
   if(total<=0) return t.status==='concluido'?100:0;
   var elapsed=Math.max(0,Math.min((tod-ini)/86400000,total));
   var pct=Math.round((elapsed/total)*100);
-  return t.status==='em-atraso'?Math.min(pct,80):pct;
+  // Only an explicit "Concluído" should ever show 100% — em-progresso and
+  // em-atraso are capped below it so the bar never lies about being done.
+  return t.status==='em-atraso'?Math.min(pct,80):Math.min(pct,90);
 }
 
 function calcPlan(t){
@@ -1874,7 +1880,7 @@ function dateCellHtml(original,revisedRef,desvio,efetivoFlag){
   if(desvio===null) return out;
   var dColor=desvio>0?'var(--danger)':desvio<0?'var(--accent)':'var(--text2)';
   var dLabel=(desvio>0?'+':'')+desvio+'d';
-  out+='<div style="font-size:10px;color:'+dColor+';font-weight:600" title="'+(efetivoFlag?'Efetivo':'Revisado')+': '+fmtDate(revisedRef)+'">'+dLabel+(efetivoFlag?' ✓':'')+'</div>';
+  out+='<div class="mono" style="font-size:10px;color:'+dColor+';font-weight:600" title="'+(efetivoFlag?'Efetivo':'Revisado')+'">'+fmtDate(revisedRef)+' ('+dLabel+(efetivoFlag?' ✓':'')+')</div>';
   return out;
 }
 
