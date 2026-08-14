@@ -1404,7 +1404,19 @@ function fmtDate(d){
 
 function fmtBRL(v){ return 'R$ '+Math.round(v).toLocaleString('pt-BR'); }
 
+// ─── SUBTAREFAS ───────────────────────────────────────────────────────────────
+// A task can be broken down into child tasks (parentId) without ever touching
+// its own baseline ini/fim. Once it has children, its progress and revised/
+// actual dates are derived from them instead of tracked on the task itself.
+function getChildren(id){ return state.tasks.filter(function(t){return t.parentId===id;}); }
+
 function calcReal(t){
+  var kids=getChildren(t.id);
+  if(kids.length){
+    var totalDur=kids.reduce(function(a,k){return a+(k.dur||1);},0);
+    var w=0; kids.forEach(function(k){w+=((k.dur||1)/totalDur)*calcReal(k);});
+    return Math.round(w);
+  }
   if(t.status==='concluido') return 100;
   if(t.status==='nao-iniciado') return 0;
   if(!t.ini||!t.fim) return t.status==='em-atraso'?30:50;
@@ -1417,12 +1429,44 @@ function calcReal(t){
 }
 
 function calcPlan(t){
+  var kids=getChildren(t.id);
+  if(kids.length){
+    var totalDur=kids.reduce(function(a,k){return a+(k.dur||1);},0);
+    var w=0; kids.forEach(function(k){w+=((k.dur||1)/totalDur)*calcPlan(k);});
+    return Math.round(w);
+  }
   if(!t.ini||!t.fim) return 0;
   var ini=new Date(t.ini),fim=new Date(t.fim),tod=new Date(today());
   var total=(fim-ini)/86400000;
   if(total<=0) return tod>=ini?100:0; // tarefa de 1 dia: 100% só se a data já chegou (não no futuro)
   var elapsed=Math.max(0,Math.min((tod-ini)/86400000,total));
   return Math.round((elapsed/total)*100);
+}
+
+// Revised/actual reference date for the "Início revisado"/"Prazo revisado" columns.
+// With children: earliest revised start / latest effective-or-revised end among them.
+// Without children: the task's own field, exactly as before.
+function getInicioRevisadoRef(t){
+  var kids=getChildren(t.id);
+  if(kids.length){
+    var vals=kids.map(getInicioRevisadoRef).filter(Boolean);
+    return vals.length?vals.reduce(function(a,b){return b<a?b:a;}):'';
+  }
+  return t.inicioRevisado||'';
+}
+function getFimRevisadoRef(t){
+  var kids=getChildren(t.id);
+  if(kids.length){
+    var vals=kids.map(getFimRevisadoRef).filter(Boolean);
+    return vals.length?vals.reduce(function(a,b){return b>a?b:a;}):'';
+  }
+  return t.fimEfetivo||t.fimRevisado||'';
+}
+// "Efetivo" only counts at the parent level once every child has an effective end.
+function isFimEfetivo(t){
+  var kids=getChildren(t.id);
+  if(kids.length) return kids.every(isFimEfetivo);
+  return !!t.fimEfetivo;
 }
 
 function statusLabel(s){
@@ -1454,7 +1498,7 @@ function getProjectMonths(){
 
 function getFases(){ return [...new Set(state.tasks.map(function(t){return t.fase;}).filter(Boolean))]; }
 function sortByDate(arr){ return arr.slice().sort(function(a,b){ var da=a.ini||'9999-99', db=b.ini||'9999-99'; if(da!==db) return da<db?-1:1; var fa=a.fim||'9999-99', fb=b.fim||'9999-99'; return fa<fb?-1:fa>fb?1:0; }); }
-function getFaseTasks(f){ return sortByDate(state.tasks.filter(function(t){return t.fase===f;})); }
+function getFaseTasks(f){ return sortByDate(state.tasks.filter(function(t){return t.fase===f && !t.parentId;})); }
 
 function faseSummary(f){
   var tasks=getFaseTasks(f);
@@ -1465,8 +1509,19 @@ function faseSummary(f){
   return {plan:Math.round(wPlan),real:Math.round(wReal)};
 }
 
+// Effective status of a task for dashboard counts: its own status when it's a
+// leaf; derived from children's statuses when it has subtasks.
+function getEffectiveStatus(t){
+  var kids=getChildren(t.id);
+  if(!kids.length) return t.status;
+  if(kids.every(function(k){return getEffectiveStatus(k)==='concluido';})) return 'concluido';
+  if(kids.some(function(k){return getEffectiveStatus(k)==='em-atraso';})) return 'em-atraso';
+  if(kids.some(function(k){return getEffectiveStatus(k)==='em-progresso'||getEffectiveStatus(k)==='concluido';})) return 'em-progresso';
+  return 'nao-iniciado';
+}
+
 function calcProjProgress(){
-  var tasks=state.tasks;
+  var tasks=state.tasks.filter(function(t){return !t.parentId;}); // top-level only — subtasks roll up into these
   if(!tasks.length) return {plan:0,real:0,spi:1,total:0,nao:0,prog:0,ok:0,atraso:0};
   var totalDur=tasks.reduce(function(a,t){return a+(t.dur||1);},0);
   var wPlan=0,wReal=0;
@@ -1475,10 +1530,10 @@ function calcProjProgress(){
     plan:Math.round(wPlan),real:Math.round(wReal),
     spi:wPlan>0?Math.round((wReal/wPlan)*100)/100:1,
     total:tasks.length,
-    nao:tasks.filter(function(t){return t.status==='nao-iniciado';}).length,
-    prog:tasks.filter(function(t){return t.status==='em-progresso';}).length,
-    ok:tasks.filter(function(t){return t.status==='concluido';}).length,
-    atraso:tasks.filter(function(t){return t.status==='em-atraso';}).length
+    nao:tasks.filter(function(t){return getEffectiveStatus(t)==='nao-iniciado';}).length,
+    prog:tasks.filter(function(t){return getEffectiveStatus(t)==='em-progresso';}).length,
+    ok:tasks.filter(function(t){return getEffectiveStatus(t)==='concluido';}).length,
+    atraso:tasks.filter(function(t){return getEffectiveStatus(t)==='em-atraso';}).length
   };
 }
 
@@ -1795,6 +1850,58 @@ function togglePhase(headerEl){
   state.collapsedPhases[fase]=block.classList.toggle('collapsed');
   save(); // persiste o estado recolhido junto com o projeto
 }
+var expandedTasks={};
+function toggleTaskExpand(id){ expandedTasks[id]=!expandedTasks[id]; renderTasks(); }
+
+function desvioCellHtml(desvio,ref,efetivoFlag){
+  if(desvio===null) return '<span style="color:var(--text3)">—</span>';
+  var dColor=desvio>0?'var(--danger)':desvio<0?'var(--accent)':'var(--text2)';
+  var dLabel=(desvio>0?'+':'')+desvio+'d';
+  return '<span class="mono">'+fmtDate(ref)+'</span> <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>'+(efetivoFlag?' <span style="color:var(--text3)">(efetivo)</span>':'');
+}
+
+function renderTaskRow(t,isSub){
+  var kids=isSub?[]:getChildren(t.id); // subtasks are one level deep — no grandchildren
+  var real=calcReal(t),plan=calcPlan(t);
+  var effStatus=getEffectiveStatus(t);
+  var color=real>=plan?'#52B788':effStatus==='em-atraso'?'#EF4444':'#F59E0B';
+  var iniHtml=desvioCellHtml(calcDesvioInicio(t), getInicioRevisadoRef(t), false);
+  var fimHtml=desvioCellHtml(calcDesvio(t), getFimRevisadoRef(t), isFimEfetivo(t));
+  var nomeCell=kids.length
+    ? '<span onclick="toggleTaskExpand('+t.id+')" style="cursor:pointer;display:inline-block;width:14px;color:var(--text2)">'+(expandedTasks[t.id]?'▾':'▸')+'</span>'+t.nome+' <span style="color:var(--text3);font-weight:400;font-size:11px">('+kids.length+')</span>'
+    : (isSub?'<span style="display:inline-block;width:14px"></span>':'<span style="display:inline-block;width:14px"></span>')+t.nome;
+  var statusCell=kids.length
+    ? '<span class="mono" style="font-size:12px;color:var(--text2)">'+kids.filter(function(k){return k.status==='concluido';}).length+'/'+kids.length+' concluídas</span>'
+    : '<select class="status-select status-'+t.status+'" onchange="updateTaskStatus('+t.id+',this.value,this)">'
+      +'<option value="nao-iniciado"'+(t.status==='nao-iniciado'?' selected':'')+'>Não iniciado</option>'
+      +'<option value="em-progresso"'+(t.status==='em-progresso'?' selected':'')+'>Em progresso</option>'
+      +'<option value="concluido"'+(t.status==='concluido'?' selected':'')+'>Concluído</option>'
+      +'<option value="em-atraso"'+(t.status==='em-atraso'?' selected':'')+'>Em atraso</option></select>';
+  var addSubBtn=isSub?'':'<button class="btn btn-sm btn-icon" onclick="openAddSubtask('+t.id+')" title="Adicionar subtarefa" style="margin-right:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
+  var row='<tr'+(isSub?' style="background:var(--bg)"':'')+'>'
+    +'<td style="font-weight:'+(isSub?'400':'500')+';max-width:200px;padding-left:'+(isSub?'32px':'12px')+'">'+nomeCell+'</td>'
+    +'<td class="mono">'+fmtDate(t.ini)+'</td>'
+    +'<td style="white-space:nowrap;font-size:12px">'+iniHtml+'</td>'
+    +'<td class="mono">'+fmtDate(t.fim)+'</td>'
+    +'<td style="white-space:nowrap;font-size:12px">'+fimHtml+'</td>'
+    +'<td class="mono">'+(t.dur||'—')+'d</td><td style="color:var(--text2)">'+(t.resp||'—')+'</td>'
+    +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+plan+'%;background:#B5D4F4"></div></div><span class="mono" style="min-width:28px">'+plan+'%</span></div></td>'
+    +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+real+'%;background:'+color+'"></div></div><span class="mono" style="min-width:28px">'+real+'%</span></div></td>'
+    +'<td>'+statusCell+'</td>'
+    +'<td style="min-width:200px;max-width:260px"><div style="margin-bottom:'+(((t.comentarios||[]).length)?'6px':'0')+'"><input type="text" id="cmt-'+t.id+'" placeholder="Comentário + Enter para salvar..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();addComentario('+t.id+');}" style="width:100%;padding:4px 8px;font-size:12px;border:1px solid var(--border-md);border-radius:6px;background:var(--bg);color:var(--text);font-family:\'DM Sans\',sans-serif;outline:none" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border-md)\'"></div>'
+    +(((t.comentarios||[]).length)?'<div style="font-size:11px;background:var(--bg);border-radius:6px;padding:6px 8px;line-height:2">'+(t.comentarios||[]).slice().reverse().map(function(c,ci){var realIdx=(t.comentarios.length-1-ci);var riscado=c.riscado||false;return '<div style="display:flex;align-items:baseline;gap:4px"><span style="color:var(--text3);font-family:\'DM Mono\',monospace;white-space:nowrap">'+c.data+'</span> <span onclick="editComentario('+t.id+','+realIdx+',this)" style="flex:1;color:'+(riscado?'var(--text3)':'var(--text)')+';cursor:pointer;border-bottom:1px dashed var(--border-md);text-decoration:'+(riscado?'line-through':'none')+'" title="Clique para editar">'+c.texto+'</span><button onclick="toggleRiscarComentario('+t.id+','+realIdx+')" title="Riscar" style="background:none;border:none;cursor:pointer;color:'+(riscado?'var(--accent)':'var(--text3)')+';font-size:11px;padding:0;line-height:1;flex-shrink:0">S̶</button><button onclick="removeComentario('+t.id+','+realIdx+')" title="Excluir" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0;line-height:1;flex-shrink:0">✕</button></div>';}).join('')+'</div>':'')
+    +'</td>'
+    +'<td style="white-space:nowrap">'+addSubBtn
+    +'<button class="btn btn-sm btn-icon" onclick="toggleMarco('+t.id+')" title="'+(t.isMarco?'Remover marco':'Marcar como marco')+'" style="margin-right:2px;color:'+(t.isMarco?'var(--warn)':'var(--text3)')+';opacity:'+(t.isMarco?'1':'.4')+'">'
+    +'<svg width="13" height="13" viewBox="0 0 24 24" fill="'+(t.isMarco?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>'
+    +'<button class="btn btn-sm btn-icon" onclick="editTask('+t.id+')" style="margin-right:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+    +'<button class="btn btn-sm btn-icon btn-danger" onclick="deleteTask('+t.id+')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></td></tr>';
+  if(kids.length && expandedTasks[t.id]){
+    row+=sortByDate(kids).map(function(k){return renderTaskRow(k,true);}).join('');
+  }
+  return row;
+}
+
 function renderTasks(){
   var fases=getFases(),container=document.getElementById('tasks-by-phase'),empty=document.getElementById('tasks-empty');
   if(!state.tasks.length){empty.style.display='block';container.innerHTML='';return;}
@@ -1810,40 +1917,7 @@ function renderTasks(){
       +'<div class="phase-stats"><span>'+tasks.length+' tarefas</span><span>Plan: <strong>'+s.plan+'%</strong></span>'
       +'<span>Real: <strong style="color:'+(s.real>=s.plan?'var(--accent)':'var(--danger)')+'">'+s.real+'%</strong></span></div></div>'
       +'<div class="phase-body"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Início revisado</th><th>Prazo</th><th>Prazo revisado</th><th>Dur.</th><th>Responsável</th><th>% Plan</th><th>% Real</th><th>Status</th><th>Comentários</th><th></th></tr></thead>'
-      +'<tbody>'+tasks.map(function(t){
-        var real=calcReal(t),plan=calcPlan(t);
-        var color=real>=plan?'#52B788':t.status==='em-atraso'?'#EF4444':'#F59E0B';
-        function desvioCell(desvio,ref,efetivoFlag){
-          if(desvio===null) return '<span style="color:var(--text3)">—</span>';
-          var dColor=desvio>0?'var(--danger)':desvio<0?'var(--accent)':'var(--text2)';
-          var dLabel=(desvio>0?'+':'')+desvio+'d';
-          return '<span class="mono">'+fmtDate(ref)+'</span> <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>'+(efetivoFlag?' <span style="color:var(--text3)">(efetivo)</span>':'');
-        }
-        var iniHtml=desvioCell(calcDesvioInicio(t), t.inicioRevisado, false);
-        var fimHtml=desvioCell(calcDesvio(t), t.fimEfetivo||t.fimRevisado, !!t.fimEfetivo);
-        return '<tr>'
-          +'<td style="font-weight:500;max-width:200px">'+t.nome+'</td>'
-          +'<td class="mono">'+fmtDate(t.ini)+'</td>'
-          +'<td style="white-space:nowrap;font-size:12px">'+iniHtml+'</td>'
-          +'<td class="mono">'+fmtDate(t.fim)+'</td>'
-          +'<td style="white-space:nowrap;font-size:12px">'+fimHtml+'</td>'
-          +'<td class="mono">'+(t.dur||'—')+'d</td><td style="color:var(--text2)">'+(t.resp||'—')+'</td>'
-          +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+plan+'%;background:#B5D4F4"></div></div><span class="mono" style="min-width:28px">'+plan+'%</span></div></td>'
-          +'<td><div style="display:flex;align-items:center;gap:6px;min-width:70px"><div class="prog-track" style="flex:1"><div class="prog-fill" style="width:'+real+'%;background:'+color+'"></div></div><span class="mono" style="min-width:28px">'+real+'%</span></div></td>'
-          +'<td><select class="status-select status-'+t.status+'" onchange="updateTaskStatus('+t.id+',this.value,this)">'
-          +'<option value="nao-iniciado"'+(t.status==='nao-iniciado'?' selected':'')+'>Não iniciado</option>'
-          +'<option value="em-progresso"'+(t.status==='em-progresso'?' selected':'')+'>Em progresso</option>'
-          +'<option value="concluido"'+(t.status==='concluido'?' selected':'')+'>Concluído</option>'
-          +'<option value="em-atraso"'+(t.status==='em-atraso'?' selected':'')+'>Em atraso</option></select></td>'
-          +'<td style="min-width:200px;max-width:260px"><div style="margin-bottom:'+(((t.comentarios||[]).length)?'6px':'0')+'"><input type="text" id="cmt-'+t.id+'" placeholder="Comentário + Enter para salvar..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();addComentario('+t.id+');}" style="width:100%;padding:4px 8px;font-size:12px;border:1px solid var(--border-md);border-radius:6px;background:var(--bg);color:var(--text);font-family:\'DM Sans\',sans-serif;outline:none" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border-md)\'"></div>'
-          +(((t.comentarios||[]).length)?'<div style="font-size:11px;background:var(--bg);border-radius:6px;padding:6px 8px;line-height:2">'+(t.comentarios||[]).slice().reverse().map(function(c,ci){var realIdx=(t.comentarios.length-1-ci);var riscado=c.riscado||false;return '<div style="display:flex;align-items:baseline;gap:4px"><span style="color:var(--text3);font-family:\'DM Mono\',monospace;white-space:nowrap">'+c.data+'</span> <span onclick="editComentario('+t.id+','+realIdx+',this)" style="flex:1;color:'+(riscado?'var(--text3)':'var(--text)')+';cursor:pointer;border-bottom:1px dashed var(--border-md);text-decoration:'+(riscado?'line-through':'none')+'" title="Clique para editar">'+c.texto+'</span><button onclick="toggleRiscarComentario('+t.id+','+realIdx+')" title="Riscar" style="background:none;border:none;cursor:pointer;color:'+(riscado?'var(--accent)':'var(--text3)')+';font-size:11px;padding:0;line-height:1;flex-shrink:0">S̶</button><button onclick="removeComentario('+t.id+','+realIdx+')" title="Excluir" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0;line-height:1;flex-shrink:0">✕</button></div>';}).join('')+'</div>':'')
-          +'</td>'
-          +'<td style="white-space:nowrap">'
-          +'<button class="btn btn-sm btn-icon" onclick="toggleMarco('+t.id+')" title="'+(t.isMarco?'Remover marco':'Marcar como marco')+'" style="margin-right:2px;color:'+(t.isMarco?'var(--warn)':'var(--text3)')+';opacity:'+(t.isMarco?'1':'.4')+'">'
-          +'<svg width="13" height="13" viewBox="0 0 24 24" fill="'+(t.isMarco?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>'
-          +'<button class="btn btn-sm btn-icon" onclick="editTask('+t.id+')" style="margin-right:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
-          +'<button class="btn btn-sm btn-icon btn-danger" onclick="deleteTask('+t.id+')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></td></tr>';
-      }).join('')+'</tbody></table></div></div>';
+      +'<tbody>'+tasks.map(function(t){ return renderTaskRow(t,false); }).join('')+'</tbody></table></div></div>';
   }).join('');
 }
 
@@ -1906,6 +1980,10 @@ function updateTaskStatus(id,val,sel){
   // Auto-capture revised/actual dates on status transitions (only if not already set)
   if(val==='em-progresso' && !t.inicioRevisado) t.inicioRevisado=today();
   if(val==='concluido' && !t.fimEfetivo) t.fimEfetivo=today();
+  // Undo the auto-capture if the status is reverted (e.g. set by mistake) —
+  // an auto-set date shouldn't linger once the status it was tied to is gone.
+  if(val==='nao-iniciado') t.inicioRevisado='';
+  if(val!=='concluido') t.fimEfetivo='';
   // Sync linked marco status
   if(t.isMarco){
     var m=state.marcos.find(function(m){return m.taskId===id;});
@@ -1927,8 +2005,8 @@ function calcDesvioDias(planejado,revisado){
   var d1=new Date(planejado+'T00:00:00'),d2=new Date(revisado+'T00:00:00');
   return Math.round((d2-d1)/86400000);
 }
-function calcDesvio(t){ return calcDesvioDias(t.fim, t.fimEfetivo||t.fimRevisado); }
-function calcDesvioInicio(t){ return calcDesvioDias(t.ini, t.inicioRevisado); }
+function calcDesvio(t){ return calcDesvioDias(t.fim, getFimRevisadoRef(t)); }
+function calcDesvioInicio(t){ return calcDesvioDias(t.ini, getInicioRevisadoRef(t)); }
 
 var editingTaskId=null;
 function calcDuracao(){
@@ -1941,10 +2019,24 @@ function calcDuracao(){
   }
 }
 
+var newTaskParentId=null;
 function openAddTask(){
   editingTaskId=null;
+  newTaskParentId=null;
   document.getElementById('modal-task-title').textContent='Nova tarefa';
   ['t-nome','t-fase','t-ini','t-fim','t-resp','t-obs','t-ini-rev','t-fim-rev','t-fim-efetivo'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('t-dur').value='';
+  var dl=document.getElementById('fases-list');
+  dl.innerHTML=getFases().map(function(f){return '<option value="'+f+'">';}).join('');
+  document.getElementById('modal-task').classList.add('open');
+}
+function openAddSubtask(parentId){
+  var parent=state.tasks.find(function(t){return t.id===parentId;}); if(!parent) return;
+  editingTaskId=null;
+  newTaskParentId=parentId;
+  document.getElementById('modal-task-title').textContent='Nova subtarefa de: '+parent.nome;
+  ['t-nome','t-ini','t-fim','t-resp','t-obs','t-ini-rev','t-fim-rev','t-fim-efetivo'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('t-fase').value=parent.fase||'';
   document.getElementById('t-dur').value='';
   var dl=document.getElementById('fases-list');
   dl.innerHTML=getFases().map(function(f){return '<option value="'+f+'">';}).join('');
@@ -1953,6 +2045,7 @@ function openAddTask(){
 function editTask(id){
   var t=state.tasks.find(function(t){return t.id===id;}); if(!t) return;
   editingTaskId=id;
+  newTaskParentId=null;
   document.getElementById('modal-task-title').textContent='Editar tarefa';
   document.getElementById('t-nome').value=t.nome||'';
   document.getElementById('t-fase').value=t.fase||'';
@@ -1980,12 +2073,18 @@ function saveTask(){
   if(editingTaskId){
     var idx=state.tasks.findIndex(function(t){return t.id===editingTaskId;});
     if(idx>=0) state.tasks[idx]=Object.assign(state.tasks[idx],obj);
-  } else { obj.status='nao-iniciado'; obj.id=state.nextId++; state.tasks.push(obj); }
+  } else {
+    obj.status='nao-iniciado'; obj.id=state.nextId++;
+    if(newTaskParentId){ obj.parentId=newTaskParentId; expandedTasks[newTaskParentId]=true; }
+    state.tasks.push(obj);
+  }
+  newTaskParentId=null;
   save(); closeModal('modal-task'); renderTasks(); toast(editingTaskId?'Tarefa atualizada':'Tarefa adicionada');
 }
 function deleteTask(id){
-  if(!confirm('Excluir tarefa?')) return;
-  state.tasks=state.tasks.filter(function(t){return t.id!==id;});
+  var kids=getChildren(id);
+  if(!confirm(kids.length?'Excluir tarefa e as '+kids.length+' subtarefa(s) dela?':'Excluir tarefa?')) return;
+  state.tasks=state.tasks.filter(function(t){return t.id!==id && t.parentId!==id;});
   save(); renderTasks(); toast('Excluída');
 }
 
