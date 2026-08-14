@@ -487,6 +487,11 @@ textarea{resize:vertical;min-height:60px}
         <h3>Nenhuma tarefa</h3><p>Importe o cronograma ou adicione manualmente.</p>
       </div>
       <div id="tasks-by-phase"></div>
+      <div id="tasks-add-bottom" style="display:none;margin-top:16px">
+        <button class="btn btn-primary btn-sm" onclick="openAddTask()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova tarefa
+        </button>
+      </div>
     </div>
 
     <!-- HORAS -->
@@ -1962,9 +1967,10 @@ function renderTaskRow(t,isSub){
 }
 
 function renderTasks(){
-  var fases=getFases(),container=document.getElementById('tasks-by-phase'),empty=document.getElementById('tasks-empty');
-  if(!state.tasks.length){empty.style.display='block';container.innerHTML='';return;}
+  var fases=getFases(),container=document.getElementById('tasks-by-phase'),empty=document.getElementById('tasks-empty'),addBottom=document.getElementById('tasks-add-bottom');
+  if(!state.tasks.length){empty.style.display='block';container.innerHTML='';addBottom.style.display='none';return;}
   empty.style.display='none';
+  addBottom.style.display='block';
   container.innerHTML=fases.map(function(fase){
     var tasks=getFaseTasks(fase),s=faseSummary(fase);
     // Calc phase start/end dates
