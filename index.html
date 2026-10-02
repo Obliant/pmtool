@@ -2955,7 +2955,7 @@ function deletePortMarco(itemId,marcoId){
 }
 
 // ─── PORTFOLIO TOTVS (torres/verticais, espaço independente de qualquer projeto) ──
-var portExpanded={};
+var portExpandedId=null; // só um item do portfólio fica aberto por vez
 function renderPortfolioScreen(){
   if(!portfolioData.itens) portfolioData.itens=[];
   var items=portfolioData.itens;
@@ -2964,7 +2964,7 @@ function renderPortfolioScreen(){
   if(!items.length){ el.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   el.innerHTML=items.map(function(it){
-    var exp=!!portExpanded[it.id];
+    var exp=(portExpandedId===it.id);
     var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
     var resumo=nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s');
     return '<div class="card" style="margin-bottom:12px">'
@@ -2974,7 +2974,7 @@ function renderPortfolioScreen(){
       +'<div style="display:flex;align-items:center;gap:4px">'
       +'<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();editPortItem('+it.id+')" title="Editar projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
       +'<button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deletePortItem('+it.id+')" title="Excluir projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
-      +'<span style="font-size:12px;color:var(--text3);padding-left:4px">'+(exp?'▾':'▸')+'</span>'
+      +'<span style="font-size:19px;line-height:1;color:var(--text2);padding-left:6px">'+(exp?'▾':'▸')+'</span>'
       +'</div></div>'
       +(exp?portItemDetailHTML(it):'')
       +'</div>';
@@ -3046,7 +3046,7 @@ function portItemDetailHTML(it){
     +marcosHTML
     +'</div>';
 }
-function togglePortItem(id){ portExpanded[id]=!portExpanded[id]; renderPortfolioScreen(); }
+function togglePortItem(id){ portExpandedId=(portExpandedId===id)?null:id; renderPortfolioScreen(); }
 var editingPortItemId=null;
 function openAddPortItem(){
   editingPortItemId=null;
@@ -3075,7 +3075,7 @@ function savePortItem(){
   } else {
     obj.id=portfolioData.nextId++; obj.contatos=[]; obj.marcos=[]; obj.obs=[];
     portfolioData.itens.push(obj);
-    portExpanded[obj.id]=true;
+    portExpandedId=obj.id;
   }
   savePortfolioData(); closeModal('modal-portitem'); renderPortfolioScreen(); toast(editingPortItemId?'Projeto atualizado':'Projeto incluído');
 }
