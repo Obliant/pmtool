@@ -1007,7 +1007,8 @@ textarea{resize:vertical;min-height:60px}
   <div class="modal">
     <h3 id="modal-portitem-title">Novo projeto no portfólio</h3>
     <div class="form-group" style="margin-bottom:12px"><label>Nome</label><input type="text" id="pi-nome" autocomplete="off" placeholder="Ex: Torre Saúde"></div>
-    <div class="form-group" style="margin-bottom:12px"><label>Objetivo / Escopo</label><textarea id="pi-objetivo" placeholder="Objetivo e principais itens de escopo..."></textarea></div>
+    <div class="form-group" style="margin-bottom:12px"><label>Objetivo</label><textarea id="pi-objetivo" placeholder="Objetivo deste projeto..."></textarea></div>
+    <div class="form-group" style="margin-bottom:12px"><label>Escopo</label><textarea id="pi-escopo" placeholder="Principais itens de escopo..."></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-portitem')">Cancelar</button>
       <button class="btn btn-primary" onclick="savePortItem()">Salvar</button>
@@ -2829,10 +2830,8 @@ function renderContatos(){
     }).join('')+'</tbody></table>';
 }
 var editingContatoId=null;
-var portContatoCtx=null; // {itemId, contatoId|null} when the contact modal is editing a portfolio item's contact instead of the project's own
 function openAddContato(){
   editingContatoId=null;
-  portContatoCtx=null;
   document.getElementById('modal-contato-title').textContent='Novo contato';
   document.getElementById('ct-nome').value='';
   document.getElementById('ct-papel').value='PM';
@@ -2842,55 +2841,16 @@ function openAddContato(){
 function editContato(id){
   var c=(state.contatos||[]).find(function(c){return c.id===id;}); if(!c) return;
   editingContatoId=id;
-  portContatoCtx=null;
   document.getElementById('modal-contato-title').textContent='Editar contato';
   document.getElementById('ct-nome').value=c.nome||'';
   document.getElementById('ct-papel').value=c.papel||'PM';
   document.getElementById('ct-email').value=c.email||'';
   document.getElementById('modal-contato').classList.add('open');
-}
-function openAddPortContato(itemId){
-  portContatoCtx={itemId:itemId,contatoId:null};
-  document.getElementById('modal-contato-title').textContent='Novo contato';
-  document.getElementById('ct-nome').value='';
-  document.getElementById('ct-papel').value='PM';
-  document.getElementById('ct-email').value='';
-  document.getElementById('modal-contato').classList.add('open');
-}
-function editPortContato(itemId,contatoId){
-  var it=(state.portfolioItens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
-  var c=(it.contatos||[]).find(function(c){return c.id===contatoId;}); if(!c) return;
-  portContatoCtx={itemId:itemId,contatoId:contatoId};
-  document.getElementById('modal-contato-title').textContent='Editar contato';
-  document.getElementById('ct-nome').value=c.nome||'';
-  document.getElementById('ct-papel').value=c.papel||'PM';
-  document.getElementById('ct-email').value=c.email||'';
-  document.getElementById('modal-contato').classList.add('open');
-}
-function deletePortContato(itemId,contatoId){
-  if(!confirm('Excluir contato?')) return;
-  var it=(state.portfolioItens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
-  it.contatos=(it.contatos||[]).filter(function(c){return c.id!==contatoId;});
-  save(); renderPortfolio(); toast('Contato excluído');
 }
 function saveContato(){
   var nome=document.getElementById('ct-nome').value.trim();
   if(!nome){toast('Informe o nome');return;}
   var obj={nome:nome,papel:document.getElementById('ct-papel').value,email:document.getElementById('ct-email').value.trim()};
-  if(portContatoCtx){
-    var it=(state.portfolioItens||[]).find(function(x){return x.id===portContatoCtx.itemId;});
-    if(it){
-      if(!it.contatos) it.contatos=[];
-      if(portContatoCtx.contatoId){
-        var pidx=it.contatos.findIndex(function(c){return c.id===portContatoCtx.contatoId;});
-        if(pidx>=0) it.contatos[pidx]=Object.assign(it.contatos[pidx],obj);
-      } else { obj.id=state.nextId++; it.contatos.push(obj); }
-    }
-    var wasEdit=!!portContatoCtx.contatoId;
-    portContatoCtx=null;
-    save(); closeModal('modal-contato'); renderPortfolio(); toast(wasEdit?'Contato atualizado':'Contato adicionado');
-    return;
-  }
   if(!state.contatos) state.contatos=[];
   if(editingContatoId){
     var idx=state.contatos.findIndex(function(c){return c.id===editingContatoId;});
@@ -2902,6 +2862,54 @@ function deleteContato(id){
   if(!confirm('Excluir contato?')) return;
   state.contatos=state.contatos.filter(function(c){return c.id!==id;});
   save(); renderContatos(); toast('Contato excluído');
+}
+
+// ─── Contatos/Observações inline dentro de um item do Portfólio ──────────────
+var inlineContatoEdit={}; // itemId -> contatoId em edição (undefined = modo "adicionar")
+function startEditPortContato(itemId,contatoId){
+  inlineContatoEdit[itemId]=contatoId;
+  renderPortfolio();
+}
+function cancelInlineContato(itemId){
+  delete inlineContatoEdit[itemId];
+  renderPortfolio();
+}
+function saveInlinePortContato(itemId){
+  var it=(state.portfolioItens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var nome=document.getElementById('pcf-nome-'+itemId).value.trim();
+  if(!nome){toast('Informe o nome');return;}
+  var obj={nome:nome,empresa:document.getElementById('pcf-empresa-'+itemId).value,papel:document.getElementById('pcf-papel-'+itemId).value,email:document.getElementById('pcf-email-'+itemId).value.trim()};
+  if(!it.contatos) it.contatos=[];
+  var editingId=inlineContatoEdit[itemId];
+  if(editingId!=null){
+    var idx=it.contatos.findIndex(function(c){return c.id===editingId;});
+    if(idx>=0) it.contatos[idx]=Object.assign(it.contatos[idx],obj);
+  } else { obj.id=state.nextId++; it.contatos.push(obj); }
+  var wasEdit=editingId!=null;
+  delete inlineContatoEdit[itemId];
+  save(); renderPortfolio(); toast(wasEdit?'Contato atualizado':'Contato adicionado');
+}
+function deletePortContato(itemId,contatoId){
+  if(!confirm('Excluir contato?')) return;
+  var it=(state.portfolioItens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  it.contatos=(it.contatos||[]).filter(function(c){return c.id!==contatoId;});
+  if(inlineContatoEdit[itemId]===contatoId) delete inlineContatoEdit[itemId];
+  save(); renderPortfolio(); toast('Contato excluído');
+}
+function addPortObs(itemId){
+  var ta=document.getElementById('pobs-texto-'+itemId);
+  var texto=ta.value.trim();
+  if(!texto){toast('Escreva a observação');return;}
+  var it=(state.portfolioItens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  if(!it.obs) it.obs=[];
+  it.obs.push({id:state.nextId++,data:today(),texto:texto});
+  save(); renderPortfolio(); toast('Observação adicionada');
+}
+function deletePortObs(itemId,obsId){
+  if(!confirm('Excluir observação?')) return;
+  var it=(state.portfolioItens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  it.obs=(it.obs||[]).filter(function(o){return o.id!==obsId;});
+  save(); renderPortfolio(); toast('Excluído');
 }
 
 // ─── PORTFOLIO (projetos/torres aninhados, sem gerenciar tarefas/cronograma) ──
@@ -2930,18 +2938,49 @@ function renderPortfolio(){
       +'</div>';
   }).join('');
 }
+function escAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
+function portContatoFormHTML(it){
+  var editingId=inlineContatoEdit[it.id];
+  var editing=editingId!=null;
+  var c=editing?(it.contatos||[]).find(function(x){return x.id===editingId;}):null;
+  var empresaOpts=['TOTVS','Cliente','Outro'];
+  var papelOpts=['PM','GPP','CP TOTVS','ESN','Outro'];
+  return '<div style="background:var(--bg);border-radius:var(--r);padding:12px;margin-top:8px">'
+    +(editing?'<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Editando contato — <a href="#" onclick="event.preventDefault();cancelInlineContato('+it.id+')" style="color:var(--accent)">cancelar</a></div>':'')
+    +'<div class="form-group" style="margin-bottom:8px"><label>Nome</label><input type="text" id="pcf-nome-'+it.id+'" autocomplete="off" value="'+(c?escAttr(c.nome):'')+'"></div>'
+    +'<div class="form-group" style="margin-bottom:8px"><label>Empresa</label><select id="pcf-empresa-'+it.id+'">'
+      +empresaOpts.map(function(o){return '<option value="'+o+'"'+((c?c.empresa===o:o==='TOTVS')?' selected':'')+'>'+o+'</option>';}).join('')
+    +'</select></div>'
+    +'<div class="form-group" style="margin-bottom:8px"><label>Papel</label><select id="pcf-papel-'+it.id+'">'
+      +papelOpts.map(function(o){return '<option value="'+o+'"'+((c?c.papel===o:o==='PM')?' selected':'')+'>'+o+'</option>';}).join('')
+    +'</select></div>'
+    +'<div class="form-group" style="margin-bottom:10px"><label>E-mail</label><input type="email" id="pcf-email-'+it.id+'" autocomplete="off" value="'+(c?escAttr(c.email):'')+'"></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="saveInlinePortContato('+it.id+')">'+(editing?'Salvar':'Adicionar contato')+'</button>'
+    +'</div>';
+}
 function portItemDetailHTML(it){
   var contatos=it.contatos||[];
   var contatosHTML=contatos.length
     ? contatos.map(function(c){
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px">'
-          +'<div><strong>'+c.nome+'</strong> <span class="badge badge-future" style="margin-left:4px"><span class="badge-dot"></span>'+c.papel+'</span>'+(c.email?' <a href="mailto:'+c.email+'" style="color:var(--accent);margin-left:4px">'+c.email+'</a>':'')+'</div>'
+          +'<div><strong>'+c.nome+'</strong> <span class="badge badge-future" style="margin-left:4px"><span class="badge-dot"></span>'+(c.empresa||'TOTVS')+'</span> <span class="badge badge-future"><span class="badge-dot"></span>'+c.papel+'</span>'+(c.email?' <a href="mailto:'+c.email+'" style="color:var(--accent);margin-left:4px">'+c.email+'</a>':'')+'</div>'
           +'<div style="white-space:nowrap">'
-          +'<button class="btn btn-sm btn-icon" onclick="editPortContato('+it.id+','+c.id+')" style="margin-right:2px" title="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+          +'<button class="btn btn-sm btn-icon" onclick="startEditPortContato('+it.id+','+c.id+')" style="margin-right:2px" title="Editar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
           +'<button class="btn btn-sm btn-icon btn-danger" onclick="deletePortContato('+it.id+','+c.id+')" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
           +'</div></div>';
       }).join('')
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum contato.</div>';
+  var obsList=(it.obs||[]).slice().sort(function(a,b){return (b.data||'').localeCompare(a.data||'');});
+  var obsHTML=(obsList.length
+    ? obsList.map(function(o){
+        return '<div style="padding:8px 0;border-top:1px solid var(--border);font-size:12px">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between"><span class="mono" style="color:var(--text3)">'+fmtDate(o.data)+'</span>'
+          +'<button class="btn btn-sm btn-icon btn-danger" onclick="deletePortObs('+it.id+','+o.id+')" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></div>'
+          +'<div style="margin-top:2px;white-space:pre-wrap">'+o.texto+'</div></div>';
+      }).join('')
+    : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhuma observação.</div>')
+    +'<div style="margin-top:8px"><textarea id="pobs-texto-'+it.id+'" rows="2" placeholder="Escreva uma observação..." style="margin-bottom:6px"></textarea>'
+    +'<button class="btn btn-sm" onclick="addPortObs('+it.id+')">+ Observação</button></div>';
   var marcos=it.marcos||[];
   var marcosHTML=marcos.length
     ? '<div style="overflow-x:auto"><table class="tbl" style="margin-top:4px"><thead><tr><th>Marco</th><th>Planejado</th><th>Status</th><th>Valor</th><th>Financeiro</th><th></th></tr></thead><tbody>'
@@ -2954,9 +2993,13 @@ function portItemDetailHTML(it){
       }).join('')+'</tbody></table></div>'
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>';
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
-    +(it.objetivo?'<div style="font-size:13px;color:var(--text);margin-bottom:14px;white-space:pre-wrap">'+it.objetivo+'</div>':'')
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="card-title" style="margin-bottom:0;font-size:12px">👤 Contatos</div><button class="btn btn-sm" onclick="openAddPortContato('+it.id+')">+ Contato</button></div>'
+    +(it.objetivo?'<div class="card-title" style="margin-bottom:4px;font-size:12px">🎯 Objetivo</div><div style="font-size:13px;color:var(--text);margin-bottom:14px;white-space:pre-wrap">'+it.objetivo+'</div>':'')
+    +(it.escopo?'<div class="card-title" style="margin-bottom:4px;font-size:12px">📋 Escopo</div><div style="font-size:13px;color:var(--text);margin-bottom:14px;white-space:pre-wrap">'+it.escopo+'</div>':'')
+    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">🗒️ Observações</div>'
+    +obsHTML
+    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">👤 Contatos</div>'
     +contatosHTML
+    +portContatoFormHTML(it)
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 4px"><div class="card-title" style="margin-bottom:0;font-size:12px">🚩 Marcos</div><button class="btn btn-sm" onclick="openAddPortMarco('+it.id+')">+ Marco</button></div>'
     +marcosHTML
     +'</div>';
@@ -2968,6 +3011,7 @@ function openAddPortItem(){
   document.getElementById('modal-portitem-title').textContent='Novo projeto no portfólio';
   document.getElementById('pi-nome').value='';
   document.getElementById('pi-objetivo').value='';
+  document.getElementById('pi-escopo').value='';
   document.getElementById('modal-portitem').classList.add('open');
 }
 function editPortItem(id){
@@ -2976,17 +3020,18 @@ function editPortItem(id){
   document.getElementById('modal-portitem-title').textContent='Editar projeto';
   document.getElementById('pi-nome').value=it.nome||'';
   document.getElementById('pi-objetivo').value=it.objetivo||'';
+  document.getElementById('pi-escopo').value=it.escopo||'';
   document.getElementById('modal-portitem').classList.add('open');
 }
 function savePortItem(){
   var nome=document.getElementById('pi-nome').value.trim();
   if(!nome){toast('Informe o nome');return;}
-  var obj={nome:nome,objetivo:document.getElementById('pi-objetivo').value.trim()};
+  var obj={nome:nome,objetivo:document.getElementById('pi-objetivo').value.trim(),escopo:document.getElementById('pi-escopo').value.trim()};
   if(editingPortItemId){
     var idx=state.portfolioItens.findIndex(function(x){return x.id===editingPortItemId;});
     if(idx>=0) state.portfolioItens[idx]=Object.assign(state.portfolioItens[idx],obj);
   } else {
-    obj.id=state.nextId++; obj.contatos=[]; obj.marcos=[];
+    obj.id=state.nextId++; obj.contatos=[]; obj.marcos=[]; obj.obs=[];
     state.portfolioItens.push(obj);
     portExpanded[obj.id]=true;
   }
