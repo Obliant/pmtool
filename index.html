@@ -37,12 +37,14 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .proj-new{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--surface);border:1.5px dashed var(--border-md);border-radius:var(--rl);cursor:pointer;color:var(--text2);font-size:13px;transition:all .15s}
 .proj-new:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-l)}
 
-.landing-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-@media(max-width:860px){.landing-grid{grid-template-columns:1fr}}
+.landing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:1100px){.landing-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.landing-grid{grid-template-columns:1fr}}
 .landing-panel{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:22px 22px 18px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(13,33,55,.04)}
 .landing-panel-head h2{font-size:15px;font-weight:600;color:#0d2137;margin-bottom:4px}
 .landing-panel-head p{font-size:12px;color:var(--text2);margin-bottom:14px}
 .landing-panel-totvs{border-color:rgba(29,78,216,.22);background:linear-gradient(160deg,#fff 0%,#f6f9ff 100%)}
+.landing-panel-demandas{border-color:rgba(180,83,9,.22);background:linear-gradient(160deg,#fff 0%,#fff9ef 100%)}
 
 /* MAIN APP */
 .shell{display:flex;min-height:100vh}
@@ -249,7 +251,7 @@ textarea{resize:vertical;min-height:60px}
     <div style="position:absolute;bottom:-10px;right:-10px;width:340px;height:340px;opacity:0.05;pointer-events:none;transform:rotate(-8deg)">
       <img src="https://obliant.com.br/wp-content/uploads/2025/09/Logo.png" alt="" style="width:100%;filter:grayscale(1) contrast(3)">
     </div>
-    <div style="width:100%;max-width:980px;position:relative">
+    <div style="width:100%;max-width:1180px;position:relative">
       <!-- Header -->
       <div style="margin-bottom:24px">
         <div id="gestor-greeting" style="font-size:13px;color:var(--accent);font-weight:500;margin-bottom:8px"></div>
@@ -283,6 +285,17 @@ textarea{resize:vertical;min-height:60px}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
             Abrir Portfólio TOTVS →
           </div>
+        </div>
+        <div class="landing-panel landing-panel-demandas">
+          <div class="landing-panel-head">
+            <h2>📋 Demandas PMO</h2>
+            <p>Suas demandas, pipeline de novos projetos e horas — arquivo local.</p>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:18px 0;font-size:12px;color:var(--text3);text-align:center">Abre em outra aba, fora do PM Tool.</div>
+          <a href="file:///C:/Users/jujum/Desktop/Pastas/05.%20Admin%20Obliant/Demandas%20PMO/Demandas_PMO.html" target="_blank" class="proj-new" style="margin-top:8px;border-style:solid;border-color:var(--warn);color:var(--warn);background:var(--warn-l);text-decoration:none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Abrir Demandas PMO →
+          </a>
         </div>
       </div>
       <!-- Footer -->
