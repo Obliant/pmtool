@@ -540,7 +540,7 @@ textarea{resize:vertical;min-height:60px}
       </div>
       <div class="card" style="padding:0">
         <table class="tbl" id="marcos-table">
-          <thead><tr><th>Marco</th><th>Fase</th><th>Planejado</th><th>Realizado</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Marco</th><th>Fase</th><th>Planejado</th><th>Realizado</th><th>Status</th><th>Valor</th><th>Financeiro</th><th></th></tr></thead>
           <tbody id="marcos-body"></tbody>
         </table>
       </div>
@@ -595,8 +595,19 @@ textarea{resize:vertical;min-height:60px}
             <select id="cfg-status"><option value="ativo">Ativo</option><option value="pausado">Pausado</option><option value="warn">Em risco</option><option value="crit">Atrasado</option><option value="encerrado">Encerrado</option><option value="cancelado">Cancelado</option></select>
           </div>
         </div>
+        <div class="form-group" style="margin-bottom:12px"><label>Objetivo / Escopo</label><textarea id="cfg-objetivo" placeholder="Objetivo do projeto e principais itens de escopo..."></textarea></div>
         <div class="form-group" style="margin-bottom:12px"><label>Observações</label><textarea id="cfg-obs"></textarea></div>
         <button class="btn btn-primary" onclick="saveConfig()">Salvar</button>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0">👤 Contatos</div>
+          <button class="btn btn-sm" onclick="openAddContato()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo contato
+          </button>
+        </div>
+        <div id="contatos-list"></div>
+        <div id="contatos-empty" style="display:none;padding:16px 0;font-size:13px;color:var(--text3)">Nenhum contato cadastrado.</div>
       </div>
       <div class="card" style="border-color:var(--danger-l)">
         <div class="card-title" style="color:var(--danger)">Zona de perigo</div>
@@ -815,10 +826,21 @@ textarea{resize:vertical;min-height:60px}
       <div class="form-group"><label>Data planejada</label><input type="date" id="m-plan"></div>
       <div class="form-group"><label>Data realizada</label><input type="date" id="m-real"></div>
     </div>
-    <div class="form-group" style="margin-bottom:12px"><label>Status</label>
-      <select id="m-status">
-        <option value="future">Futuro</option><option value="progress">Em andamento</option>
-        <option value="ok">Concluído</option><option value="crit">Atrasado</option>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="m-status">
+          <option value="future">Futuro</option><option value="progress">Em andamento</option>
+          <option value="ok">Concluído</option><option value="crit">Atrasado</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor (R$)</label><input type="number" id="m-valor" min="0" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px"><label>Status financeiro</label>
+      <select id="m-statusfin">
+        <option value="">—</option>
+        <option value="afaturar">A faturar</option>
+        <option value="faturado">Faturado</option>
+        <option value="pago">Pago</option>
       </select>
     </div>
     <div class="modal-footer">
@@ -931,6 +953,29 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
+<div class="overlay" id="modal-contato">
+  <div class="modal">
+    <h3 id="modal-contato-title">Novo contato</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome</label><input type="text" id="ct-nome" autocomplete="off"></div>
+      <div class="form-group"><label>Papel</label>
+        <select id="ct-papel">
+          <option value="PM">PM</option>
+          <option value="GPP">GPP</option>
+          <option value="CP TOTVS">CP TOTVS</option>
+          <option value="ESN">ESN</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px"><label>E-mail</label><input type="email" id="ct-email" autocomplete="off"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-contato')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveContato()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NOTA -->
 <div class="overlay" id="modal-nota">
   <div class="modal">
@@ -1000,6 +1045,7 @@ function loadProjectData(id){
     if(!d.consultores) d.consultores=[];
     if(!d.notas) d.notas=[];
     if(!d.riscos) d.riscos=[];
+    if(!d.contatos) d.contatos=[];
     return d;
   } catch(e){ return defaultProjectData(); }
 }
@@ -1007,7 +1053,7 @@ function saveProjectData(id, data){ localStorage.setItem(PD+id, JSON.stringify(d
 function deleteProjectData(id){ localStorage.removeItem(PD+id); }
 
 function defaultProjectData(){
-  return { project:{nome:'',cliente:'',inicio:'',fim:'',gp:'',status:'ok',obs:''}, tasks:[], marcos:[], consultores:[], notas:[], riscos:[], nextId:1 };
+  return { project:{nome:'',cliente:'',inicio:'',fim:'',gp:'',status:'ok',obs:'',objetivo:''}, tasks:[], marcos:[], consultores:[], notas:[], riscos:[], contatos:[], nextId:1 };
 }
 
 // ─── ACTIVE PROJECT ───────────────────────────────────────────────────────────
@@ -1506,6 +1552,13 @@ function statusBadge(s){
 function marcoBadge(s){
   var map={ok:'badge-ok',progress:'badge-progress',crit:'badge-crit',future:'badge-future'};
   var lbl={ok:'Concluído',progress:'Em andamento',crit:'Atrasado',future:'Futuro'};
+  return '<span class="badge '+(map[s]||'badge-future')+'"><span class="badge-dot"></span>'+(lbl[s]||s)+'</span>';
+}
+
+function marcoFinBadge(s){
+  if(!s) return '—';
+  var map={afaturar:'badge-future',faturado:'badge-progress',pago:'badge-ok'};
+  var lbl={afaturar:'A faturar',faturado:'Faturado',pago:'Pago'};
   return '<span class="badge '+(map[s]||'badge-future')+'"><span class="badge-dot"></span>'+(lbl[s]||s)+'</span>';
 }
 
@@ -2613,6 +2666,8 @@ function renderMarcos(){
     return '<tr><td style="font-weight:500">'+m.nome+'</td><td style="color:var(--text2)">'+(m.fase||'—')+'</td>'
       +'<td class="mono">'+fmtDate(m.planDate)+'</td><td class="mono">'+(m.realDate?fmtDate(m.realDate):'—')+'</td>'
       +'<td>'+marcoBadge(m.status)+'</td>'
+      +'<td class="mono">'+(m.valor?fmtBRL(m.valor):'—')+'</td>'
+      +'<td>'+marcoFinBadge(m.statusFin)+'</td>'
       +'<td style="text-align:right">'
       +'<button class="btn btn-sm btn-icon" onclick="editMarco('+m.id+')" style="margin-right:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
       +'<button class="btn btn-sm btn-icon btn-danger" onclick="deleteMarco('+m.id+')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></td></tr>';
@@ -2621,8 +2676,9 @@ function renderMarcos(){
 var editingMarcoId=null;
 function openAddMarco(){
   editingMarcoId=null;
-  ['m-nome','m-fase','m-plan','m-real'].forEach(function(id){document.getElementById(id).value='';});
+  ['m-nome','m-fase','m-plan','m-real','m-valor'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('m-status').value='future';
+  document.getElementById('m-statusfin').value='';
   document.getElementById('modal-marco').classList.add('open');
 }
 function editMarco(id){
@@ -2633,12 +2689,14 @@ function editMarco(id){
   document.getElementById('m-plan').value=m.planDate||'';
   document.getElementById('m-real').value=m.realDate||'';
   document.getElementById('m-status').value=m.status||'future';
+  document.getElementById('m-valor').value=m.valor||'';
+  document.getElementById('m-statusfin').value=m.statusFin||'';
   document.getElementById('modal-marco').classList.add('open');
 }
 function saveMarco(){
   var nome=document.getElementById('m-nome').value.trim();
   if(!nome){toast('Informe o nome');return;}
-  var obj={nome:nome,fase:document.getElementById('m-fase').value.trim(),planDate:document.getElementById('m-plan').value,realDate:document.getElementById('m-real').value,status:document.getElementById('m-status').value};
+  var obj={nome:nome,fase:document.getElementById('m-fase').value.trim(),planDate:document.getElementById('m-plan').value,realDate:document.getElementById('m-real').value,status:document.getElementById('m-status').value,valor:parseFloat(document.getElementById('m-valor').value)||0,statusFin:document.getElementById('m-statusfin').value};
   if(editingMarcoId){
     var idx=state.marcos.findIndex(function(m){return m.id===editingMarcoId;});
     if(idx>=0) state.marcos[idx]=Object.assign(state.marcos[idx],obj);
@@ -2649,6 +2707,61 @@ function deleteMarco(id){
   if(!confirm('Excluir marco?')) return;
   state.marcos=state.marcos.filter(function(m){return m.id!==id;});
   save(); renderMarcos(); toast('Excluído');
+}
+
+// ─── CONTATOS ─────────────────────────────────────────────────────────────────
+function renderContatos(){
+  if(!state.contatos) state.contatos=[];
+  var contatos=state.contatos;
+  var el=document.getElementById('contatos-list');
+  var empty=document.getElementById('contatos-empty');
+  if(!contatos.length){el.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  el.innerHTML='<table class="tbl"><thead><tr><th>Nome</th><th>Papel</th><th>E-mail</th><th></th></tr></thead><tbody>'
+    +contatos.map(function(c){
+      return '<tr>'
+        +'<td style="font-weight:500">'+c.nome+'</td>'
+        +'<td><span class="badge badge-future"><span class="badge-dot"></span>'+c.papel+'</span></td>'
+        +'<td style="font-size:12px">'+(c.email?'<a href="mailto:'+c.email+'" style="color:var(--accent)">'+c.email+'</a>':'—')+'</td>'
+        +'<td style="white-space:nowrap;text-align:right">'
+        +'<button class="btn btn-sm btn-icon" onclick="editContato('+c.id+')" style="margin-right:4px" title="Editar contato"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+        +'<button class="btn btn-sm btn-icon btn-danger" onclick="deleteContato('+c.id+')" title="Excluir contato"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
+        +'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+var editingContatoId=null;
+function openAddContato(){
+  editingContatoId=null;
+  document.getElementById('modal-contato-title').textContent='Novo contato';
+  document.getElementById('ct-nome').value='';
+  document.getElementById('ct-papel').value='PM';
+  document.getElementById('ct-email').value='';
+  document.getElementById('modal-contato').classList.add('open');
+}
+function editContato(id){
+  var c=(state.contatos||[]).find(function(c){return c.id===id;}); if(!c) return;
+  editingContatoId=id;
+  document.getElementById('modal-contato-title').textContent='Editar contato';
+  document.getElementById('ct-nome').value=c.nome||'';
+  document.getElementById('ct-papel').value=c.papel||'PM';
+  document.getElementById('ct-email').value=c.email||'';
+  document.getElementById('modal-contato').classList.add('open');
+}
+function saveContato(){
+  var nome=document.getElementById('ct-nome').value.trim();
+  if(!nome){toast('Informe o nome');return;}
+  if(!state.contatos) state.contatos=[];
+  var obj={nome:nome,papel:document.getElementById('ct-papel').value,email:document.getElementById('ct-email').value.trim()};
+  if(editingContatoId){
+    var idx=state.contatos.findIndex(function(c){return c.id===editingContatoId;});
+    if(idx>=0) state.contatos[idx]=Object.assign(state.contatos[idx],obj);
+  } else { obj.id=state.nextId++; state.contatos.push(obj); }
+  save(); closeModal('modal-contato'); renderContatos(); toast(editingContatoId?'Contato atualizado':'Contato adicionado');
+}
+function deleteContato(id){
+  if(!confirm('Excluir contato?')) return;
+  state.contatos=state.contatos.filter(function(c){return c.id!==id;});
+  save(); renderContatos(); toast('Contato excluído');
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
@@ -2664,7 +2777,9 @@ function loadConfigFields(){
   document.getElementById('cfg-fim').value=p.fim||'';
   document.getElementById('cfg-gp').value=p.gp||'';
   document.getElementById('cfg-status').value=p.status||'ok';
+  document.getElementById('cfg-objetivo').value=p.objetivo||'';
   document.getElementById('cfg-obs').value=p.obs||'';
+  renderContatos();
 }
 function saveConfig(){
   state.project={
@@ -2674,6 +2789,7 @@ function saveConfig(){
     fim:document.getElementById('cfg-fim').value,
     gp:document.getElementById('cfg-gp').value.trim(),
     status:document.getElementById('cfg-status').value,
+    objetivo:document.getElementById('cfg-objetivo').value.trim(),
     obs:document.getElementById('cfg-obs').value.trim()
   };
   save(); updateSidebar(); updateProjectName();
@@ -2877,7 +2993,8 @@ function exportRelatorio(){
     +'</table>'
     +ganttReportHTML()
     +(state.consultores.length?'<h2>Horas por consultor</h2><table><tr><th>Consultor</th><th>Forecast</th><th>Realizado</th><th>Saldo</th></tr>'+state.consultores.map(function(c){var r=Object.values(c.horasReal||{}).reduce(function(a,v){return a+(v||0);},0),s=(c.totalHoras||0)-r;return '<tr><td>'+c.nome+'</td><td>'+(c.totalHoras||0)+'h</td><td>'+r+'h</td><td class="'+(s>=0?'ok':'crit')+'">'+(s>=0?'+':'')+s+'h</td></tr>';}).join('')+'</table>':'')
-    +(state.marcos.length?'<h2>Marcos</h2><table><tr><th>Marco</th><th>Fase</th><th>Planejado</th><th>Realizado</th><th>Status</th></tr>'+state.marcos.map(function(m){var sl={ok:'Concluído',progress:'Em andamento',crit:'Atrasado',future:'Futuro'};return '<tr><td>'+m.nome+'</td><td>'+(m.fase||'—')+'</td><td>'+fmtDate(m.planDate)+'</td><td>'+(fmtDate(m.realDate)||'—')+'</td><td>'+sl[m.status]+'</td></tr>';}).join('')+'</table>':'')
+    +(state.marcos.length?'<h2>Marcos</h2><table><tr><th>Marco</th><th>Fase</th><th>Planejado</th><th>Realizado</th><th>Status</th><th>Valor</th><th>Financeiro</th></tr>'+state.marcos.map(function(m){var sl={ok:'Concluído',progress:'Em andamento',crit:'Atrasado',future:'Futuro'};var slf={afaturar:'A faturar',faturado:'Faturado',pago:'Pago'};return '<tr><td>'+m.nome+'</td><td>'+(m.fase||'—')+'</td><td>'+fmtDate(m.planDate)+'</td><td>'+(fmtDate(m.realDate)||'—')+'</td><td>'+sl[m.status]+'</td><td>'+(m.valor?fmtBRL(m.valor):'—')+'</td><td>'+(slf[m.statusFin]||'—')+'</td></tr>';}).join('')+'</table>':'')
+    +(state.contatos&&state.contatos.length?'<h2>Contatos</h2><table><tr><th>Nome</th><th>Papel</th><th>E-mail</th></tr>'+state.contatos.map(function(c){return '<tr><td>'+c.nome+'</td><td>'+c.papel+'</td><td>'+(c.email||'—')+'</td></tr>';}).join('')+'</table>':'')
     +'</body></html>';
   var a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
