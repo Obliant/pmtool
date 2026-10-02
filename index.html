@@ -292,22 +292,22 @@ textarea{resize:vertical;min-height:60px}
       <div class="nav-item" onclick="goPage('configurar')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41 1.41M21 12h-2M5 12H3M12 21v-2M12 5V3"/></svg>Configurar
       </div>
-      <div class="nav-item" onclick="goPage('tarefas')">
+      <div class="nav-item" data-page="tarefas" onclick="goPage('tarefas')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Tarefas
       </div>
-      <div class="nav-item" onclick="goPage('cronograma')">
+      <div class="nav-item" data-page="cronograma" onclick="goPage('cronograma')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="17" y2="12"/><line x1="8" y1="18" x2="13" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Cronograma
       </div>
-      <div class="nav-item" onclick="goPage('horas')">
+      <div class="nav-item" data-page="horas" onclick="goPage('horas')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Horas Consultores
       </div>
-      <div class="nav-item" onclick="goPage('marcos')">
+      <div class="nav-item" data-page="marcos" onclick="goPage('marcos')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Marcos
       </div>
-      <div class="nav-item" onclick="goPage('notas')">
+      <div class="nav-item" data-page="notas" onclick="goPage('notas')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Notas &amp; Riscos
       </div>
-      <div class="nav-item active" onclick="goPage('dashboard')">
+      <div class="nav-item active" data-page="dashboard" onclick="goPage('dashboard')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
       </div>
     </div>
@@ -581,6 +581,14 @@ textarea{resize:vertical;min-height:60px}
       <div class="topbar"><div><h2>Configurações</h2><div class="topbar-sub">Dados gerais do projeto</div></div></div>
       <div class="card">
         <div class="card-title">Informações do projeto</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Tipo de gestão</label>
+          <select id="cfg-tipo" onchange="toggleTipoHint()">
+            <option value="completo">Gestão completa — tarefas, cronograma, horas e marcos</option>
+            <option value="portfolio">Portfólio / Acompanhamento — só Marcos, Contatos e Notas</option>
+          </select>
+          <div id="cfg-tipo-hint" style="font-size:12px;color:var(--text2);margin-top:6px"></div>
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Nome do projeto</label><input type="text" id="cfg-nome" autocomplete="off"></div>
           <div class="form-group"><label>Cliente</label><input type="text" id="cfg-cliente" autocomplete="off"></div>
@@ -1053,7 +1061,7 @@ function saveProjectData(id, data){ localStorage.setItem(PD+id, JSON.stringify(d
 function deleteProjectData(id){ localStorage.removeItem(PD+id); }
 
 function defaultProjectData(){
-  return { project:{nome:'',cliente:'',inicio:'',fim:'',gp:'',status:'ok',obs:'',objetivo:''}, tasks:[], marcos:[], consultores:[], notas:[], riscos:[], contatos:[], nextId:1 };
+  return { project:{nome:'',cliente:'',inicio:'',fim:'',gp:'',status:'ok',obs:'',objetivo:'',tipo:'completo'}, tasks:[], marcos:[], consultores:[], notas:[], riscos:[], contatos:[], nextId:1 };
 }
 
 // ─── ACTIVE PROJECT ───────────────────────────────────────────────────────────
@@ -1199,7 +1207,10 @@ function renderProjectList(){
     var labels = {ativo:'Ativo',pausado:'Pausado',warn:'Em risco',crit:'Atrasado',encerrado:'Encerrado',cancelado:'Cancelado'};
     var col = colors[pStatus]||colors.ativo;
     var lbl = labels[pStatus]||'Ativo';
-    var meta = (data.project&&data.project.cliente?data.project.cliente+' · ':'')+nTasks+' tarefas · '+nCons+' consultores';
+    var isPortfolio = data.project&&data.project.tipo==='portfolio';
+    var nMarcos = (data.marcos||[]).length;
+    var meta = (data.project&&data.project.cliente?data.project.cliente+' · ':'')
+      +(isPortfolio ? nMarcos+' marcos' : nTasks+' tarefas · '+nCons+' consultores');
     var div = document.createElement('div');
     div.className = 'proj-item';
     div.dataset.id = p.id;
@@ -1208,6 +1219,7 @@ function renderProjectList(){
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<div class="proj-item-name">'+p.name+'</div>'
       +'<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;background:'+col[0]+';color:'+col[1]+'">'+lbl+'</span>'
+      +(isPortfolio?'<span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;background:var(--blue-l);color:var(--blue)">Portfólio</span>':'')
       +'</div>'
       +'<div class="proj-item-meta">'+meta+'</div>'
       +'</div>'
@@ -1229,7 +1241,7 @@ function openProject(id){
   document.getElementById('proj-screen').classList.remove('active');
   document.getElementById('app').style.display='flex';
   updateSidebar();
-  goPage('dashboard');
+  goPage(state.project&&state.project.tipo==='portfolio' ? 'marcos' : 'dashboard');
 }
 
 function newProject(){
@@ -1451,6 +1463,17 @@ function updateSidebar(){
   var s = statusMap[st] || statusMap['ativo'];
   var el = document.getElementById('sidebar-proj-status');
   if(el) el.innerHTML = '<span style="font-size:11px;font-weight:500;color:'+s.color+'">'+s.label+'</span>';
+
+  var isPortfolio = (state.project && state.project.tipo)==='portfolio';
+  var hiddenPages = ['tarefas','cronograma','horas','dashboard'];
+  hiddenPages.forEach(function(pg){
+    var item = document.querySelector('.nav-item[data-page="'+pg+'"]');
+    if(item) item.style.display = isPortfolio ? 'none' : '';
+  });
+  if(isPortfolio){
+    var activePage = document.querySelector('.page.active');
+    if(activePage && hiddenPages.indexOf(activePage.id.replace('page-',''))>=0) goPage('marcos');
+  }
 }
 
 function toast(msg){
@@ -2769,6 +2792,12 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o) o.classList.remove('open');});});
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
+function toggleTipoHint(){
+  var tipo=document.getElementById('cfg-tipo').value;
+  document.getElementById('cfg-tipo-hint').textContent = tipo==='portfolio'
+    ? 'Esconde Tarefas, Cronograma, Horas e Dashboard da barra lateral — ideal pra quem só acompanha marcos/MITs, sem gerenciar o cronograma micro.'
+    : 'Mostra todas as abas — tarefas, cronograma, horas, marcos e dashboard.';
+}
 function loadConfigFields(){
   var p=state.project||{};
   document.getElementById('cfg-nome').value=p.nome||'';
@@ -2777,6 +2806,8 @@ function loadConfigFields(){
   document.getElementById('cfg-fim').value=p.fim||'';
   document.getElementById('cfg-gp').value=p.gp||'';
   document.getElementById('cfg-status').value=p.status||'ok';
+  document.getElementById('cfg-tipo').value=p.tipo||'completo';
+  toggleTipoHint();
   document.getElementById('cfg-objetivo').value=p.objetivo||'';
   document.getElementById('cfg-obs').value=p.obs||'';
   renderContatos();
@@ -2789,6 +2820,7 @@ function saveConfig(){
     fim:document.getElementById('cfg-fim').value,
     gp:document.getElementById('cfg-gp').value.trim(),
     status:document.getElementById('cfg-status').value,
+    tipo:document.getElementById('cfg-tipo').value,
     objetivo:document.getElementById('cfg-objetivo').value.trim(),
     obs:document.getElementById('cfg-obs').value.trim()
   };
