@@ -1281,12 +1281,57 @@ function showDemandasPMO(){ centralGo('demandas'); }
 // ─── PORTFOLIO TOTVS (espaço independente, fora de qualquer projeto do PM Tool) ──
 var PORTFOLIO_KEY='pt_portfolio_totvs';
 var portfolioData={itens:[],nextId:1};
+// ─── Carga única (prints do repasse): preenche as torres do Portfólio TOTVS ──
+function portNorm(t){ return (t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
+function applyPortfolioSeeds(d){
+  if(!d.seedsApplied) d.seedsApplied=[];
+  if(d.seedsApplied.indexOf('repasse-2026-10')>=0) return false;
+  var hoje=today();
+  var DEP='Dependência entre RM e Ahgora: avanço do Ahgora condicionado à disponibilização da base populada e códigos definitivos do RM.';
+  var seed=[
+    {nome:'Coopanest', modelo:'Horas recorrentes',
+     status:'CP Cliente: Ingrid. Realizada a substituição da consultora Andreia pelo Diego, parceiro BTREE (apoio da Isabella), com resultado positivo. O cliente contratou uma consultoria especializada para apoiar o RH na revisão/auditoria das verbas e, em 11/09, solicitou a suspensão temporária das agendas TOTVS até a conclusão desse trabalho interno. Solicitou também a manutenção do Diego na continuidade dos atendimentos.',
+     atencao:[],
+     proximos:['Aguardar sinalização do cliente para retomada das agendas, mantendo o Diego como consultor','ACT: 192h contratadas; 137h realizadas, equivalente a 71%. Saldo projetado: 55h','Contrato até abril/27']},
+    {nome:'Savegnago', modelo:'Horas recorrentes',
+     status:'CP Cliente: Juliano. Atendimento realizado pelo parceiro BTREE (apoio da Isabella), conforme demandas apresentadas pelo cliente. ACT principal: 480h contratadas, 272h realizadas (57%) e 208h de saldo. Há ainda o contrato adicional de 80h, ainda sem consumo iniciado.',
+     atencao:[],
+     proximos:['Manter acompanhamento do consumo e alocação conforme demanda do cliente','Considerando ACT principal + horas adicionais, existem 288h ainda não realizadas (208h do ACT principal + 80h adicionais)','Contrato até jan/27']},
+    {nome:'Fundação Manoel', modelo:'Escopo Fechado',
+     status:'CP RM: Washington Ricardo – TOTVS Nordeste | CP Ahgora: Kátia Froes – TOTVS São Paulo. Kickoff realizado em 08/09. Projeto em fase inicial, contemplando em especial as frentes RM – Folha, Portal/App Meu RH e integrações; Ahgora – Ponto; QUÍRONS.',
+     atencao:[DEP,'Migração de dados de dois sistemas legados (GCI e RH3), exigindo consolidação e consistência das bases.'],
+     proximos:[['RM – 10/09: Alinhamento de Dados – concluído',true],'RM – 16/09: Workshop Empoderamento Key User','RM – 21 e 23/09: Modelagem de Processos – Folha','RM – 30/09: Envio da base legado (.BAK)','AHGORA: Aguardando retorno do briefing pelo cliente']},
+    {nome:'Hípica', modelo:'Escopo fechado',
+     status:'CP RM: Beatriz Machado – TOTVS Nordeste | CP Ahgora: Isabele Silva – TOTVS Nordeste. Kickoff realizado em 08/09. Projeto em fase inicial, contemplando em especial RM – Folha, Portal/App Meu RH e integrações; Ahgora – Ponto.',
+     atencao:[DEP,'Indisponibilidade do cliente de 14 a 18/09, devido a evento interno.'],
+     proximos:['RM – 10/09: Recebimento da base legado (.BAK)','RM – 21/09: Modelagem de Processos – Folha','RM – 22/09: Modelagem de Processos – Benefícios','RM – 23/09: Modelagem de Processos – SESMT','RM – 24/09: Modelagem de Processos – Contábil e Financeiro','RM – 25/09: Workshop Empoderamento Key User','AHGORA – 03/09: Retorno do briefing pelo cliente']},
+    {nome:'Unimed Belém', modelo:'Escopo Fechado',
+     status:'CP: Gabriel Camillo – DXM Consultoria Ltda. Projeto de ajustes e apoio à Folha de Pagamento RM. Kickoff, cronograma e MIT 041 concluídos. Fases de Preparação e Refinamento 100% concluídas. Projeto em Realização, com 50% de avanço geral e Go Live previsto para 15/10.',
+     atencao:['Projeto iniciado anteriormente com baixa formalização da governança e ausência de rotina estruturada de status. Após entrada da gestão Obliant, identificada necessidade de fortalecer acompanhamento, comunicação e controle do previsto x realizado, garantindo maior previsibilidade das entregas.'],
+     proximos:['Formalizar rotina de status e governança do projeto','Acompanhar atividades da fase de Realização e aderência ao cronograma','23–25/09: Capacitação','30/09–02/10: Testes Integrados','12/10: Go/No-Go','15/10: Go Live']}
+  ];
+  seed.forEach(function(sd){
+    var it=d.itens.find(function(x){return portNorm(x.nome)===portNorm(sd.nome);});
+    if(!it){ it={id:d.nextId++,nome:sd.nome,objetivo:'',escopo:'',contatos:[],marcos:[],obs:[],atencao:[],pendencias:[]}; d.itens.push(it); }
+    ['obs','atencao','pendencias','contatos','marcos'].forEach(function(k){ if(!it[k]) it[k]=[]; });
+    it.obs.push({id:d.nextId++,data:hoje,texto:'Modelo: '+sd.modelo});
+    it.obs.push({id:d.nextId++,data:hoje,texto:'Status / cenário atual: '+sd.status});
+    sd.atencao.forEach(function(t){ it.atencao.push({id:d.nextId++,data:hoje,texto:t}); });
+    sd.proximos.forEach(function(p){
+      var texto=Array.isArray(p)?p[0]:p, done=Array.isArray(p)?p[1]:false;
+      it.pendencias.push({id:d.nextId++,texto:texto,done:done,data:hoje});
+    });
+  });
+  d.seedsApplied.push('repasse-2026-10');
+  return true;
+}
 function loadPortfolioData(){
   try{
     var d=JSON.parse(localStorage.getItem(PORTFOLIO_KEY));
-    if(!d) return {itens:[],nextId:1};
+    if(!d) d={itens:[],nextId:1};
     if(!d.itens) d.itens=[];
     if(!d.nextId) d.nextId=1;
+    if(applyPortfolioSeeds(d)) localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(d));
     return d;
   } catch(e){ return {itens:[],nextId:1}; }
 }
@@ -2917,6 +2962,21 @@ function deletePortContato(itemId,contatoId){
   if(inlineContatoEdit[itemId]===contatoId) delete inlineContatoEdit[itemId];
   savePortfolioData(); renderPortfolioScreen(); toast('Contato excluído');
 }
+function addPortAtencao(itemId){
+  var input=document.getElementById('aten-texto-'+itemId);
+  var texto=input.value.trim();
+  if(!texto){toast('Escreva o ponto de atenção');return;}
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  if(!it.atencao) it.atencao=[];
+  it.atencao.push({id:portfolioData.nextId++,data:today(),texto:texto});
+  savePortfolioData(); renderPortfolioScreen(); toast('Ponto de atenção adicionado');
+}
+function deletePortAtencao(itemId,atId){
+  if(!confirm('Excluir ponto de atenção?')) return;
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  it.atencao=(it.atencao||[]).filter(function(a){return a.id!==atId;});
+  savePortfolioData(); renderPortfolioScreen(); toast('Excluído');
+}
 function addPortObs(itemId){
   var ta=document.getElementById('pobs-texto-'+itemId);
   var texto=ta.value.trim();
@@ -3038,6 +3098,17 @@ function portItemDetailHTML(it){
           +'</div></div>';
       }).join('')
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum contato.</div>';
+  var atenList=(it.atencao||[]).slice().sort(function(a,b){return (b.data||'').localeCompare(a.data||'');});
+  var atenHTML=(atenList.length
+    ? atenList.map(function(a){
+        return '<div style="padding:8px 10px;margin-bottom:6px;background:var(--warn-l);border-radius:var(--r);font-size:12px">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between"><span class="mono" style="color:var(--warn)">'+fmtDate(a.data)+'</span>'
+          +'<button class="btn btn-sm btn-icon btn-danger" onclick="deletePortAtencao('+it.id+','+a.id+')" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></div>'
+          +'<div style="margin-top:2px;white-space:pre-wrap">'+a.texto+'</div></div>';
+      }).join('')
+    : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum ponto de atenção.</div>')
+    +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="aten-texto-'+it.id+'" placeholder="Novo ponto de atenção..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortAtencao('+it.id+');}">'
+    +'<button class="btn btn-sm" onclick="addPortAtencao('+it.id+')">+ Atenção</button></div>';
   var obsList=(it.obs||[]).slice().sort(function(a,b){return (b.data||'').localeCompare(a.data||'');});
   var obsHTML=(obsList.length
     ? obsList.map(function(o){
@@ -3077,7 +3148,9 @@ function portItemDetailHTML(it){
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
     +(it.objetivo?'<div class="card-title" style="margin-bottom:4px;font-size:12px">🎯 Objetivo</div><div style="font-size:13px;color:var(--text);margin-bottom:14px;white-space:pre-wrap">'+it.objetivo+'</div>':'')
     +(it.escopo?'<div class="card-title" style="margin-bottom:4px;font-size:12px">📋 Escopo</div><div style="font-size:13px;color:var(--text);margin-bottom:14px;white-space:pre-wrap">'+it.escopo+'</div>':'')
-    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">🗒️ Observações</div>'
+    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">⚠️ Pontos de atenção</div>'
+    +atenHTML
+    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">🗒️ Observações</div>'
     +obsHTML
     +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">✅ Pendências</div>'
     +pendHTML
@@ -3115,7 +3188,7 @@ function savePortItem(){
     var idx=portfolioData.itens.findIndex(function(x){return x.id===editingPortItemId;});
     if(idx>=0) portfolioData.itens[idx]=Object.assign(portfolioData.itens[idx],obj);
   } else {
-    obj.id=portfolioData.nextId++; obj.contatos=[]; obj.marcos=[]; obj.obs=[]; obj.pendencias=[];
+    obj.id=portfolioData.nextId++; obj.contatos=[]; obj.marcos=[]; obj.obs=[]; obj.atencao=[]; obj.pendencias=[];
     portfolioData.itens.push(obj);
     portExpandedId=obj.id;
   }
