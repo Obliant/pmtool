@@ -55,6 +55,10 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .cnav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
 .cnav-item.active{color:#fff;border-left-color:#6EE7B7;background:rgba(255,255,255,.07)}
 .cnav-item svg{width:16px;height:16px;flex-shrink:0}
+.central-back{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:14px}
+.central-back:hover{text-decoration:underline}
+.central-back-bar{flex:0 0 auto;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.central-back-bar .central-back{margin-bottom:0}
 /* MAIN APP */
 .shell{display:flex;min-height:100vh}
 .sidebar{width:240px;min-height:100vh;background:linear-gradient(180deg,#0a1628 0%,#0d2137 60%,#091520 100%);color:#fff;display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;z-index:100}
@@ -294,6 +298,7 @@ textarea{resize:vertical;min-height:60px}
 <div class="proj-screen" id="portfolio-screen">
   <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
     <div style="max-width:900px;margin:0 auto">
+      <div class="central-back" onclick="centralGo('home')">← Central Obliant</div>
       <div class="topbar">
         <div><h2 style="font-size:22px">🧭 Gestão de Portfólio TOTVS</h2><div class="topbar-sub">Torres/verticais que você acompanha — escopo, contatos, observações e marcos — independente dos projetos do PM Tool</div></div>
         <button class="btn btn-primary btn-sm" onclick="openAddPortItem()">
@@ -313,6 +318,7 @@ textarea{resize:vertical;min-height:60px}
 <div class="proj-screen" id="projetos-screen">
   <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
     <div style="max-width:900px;margin:0 auto">
+      <div class="central-back" onclick="centralGo('home')">← Central Obliant</div>
       <div class="topbar">
         <div><h2 style="font-size:22px">📁 Gestão de Projetos</h2><div class="topbar-sub">Projetos do PM Tool — cronograma, horas, marcos e indicadores</div></div>
         <button class="btn btn-primary btn-sm" onclick="newProject()">
@@ -325,7 +331,8 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- EMBED SCREEN (Demandas / Novos Projetos / Horas, embutidos sem barra própria) -->
-<div class="proj-screen" id="embed-screen">
+<div class="proj-screen" id="embed-screen" style="flex-direction:column">
+  <div class="central-back-bar"><div class="central-back" onclick="centralGo('home')">← Central Obliant</div></div>
   <iframe id="embedFrame" style="flex:1 1 auto;width:100%;border:0;min-height:0"></iframe>
 </div>
 
@@ -393,6 +400,7 @@ textarea{resize:vertical;min-height:60px}
   
 
   <main class="main">
+    <div class="central-back" onclick="centralGo('home')">← Central Obliant</div>
     <!-- DASHBOARD -->
     <!-- CRONOGRAMA -->
     <div id="page-cronograma" class="page">
