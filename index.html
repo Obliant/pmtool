@@ -237,16 +237,7 @@ textarea{resize:vertical;min-height:60px}
 <!-- PROJECT SELECTOR -->
 <div class="proj-screen" id="proj-screen">
   <!-- Right panel -->
-  <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:48px;background:linear-gradient(150deg,#f0f4ff 0%,#f5f9f7 40%,#eef6f2 100%);position:relative;overflow-y:auto;overflow-x:hidden;">
-    <!-- Elementos decorativos inspirados na Obliant -->
-    <div style="position:absolute;top:-120px;right:-120px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(13,33,55,0.05) 0%,transparent 65%);pointer-events:none"></div>
-    <div style="position:absolute;bottom:-80px;left:-40px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(45,106,79,0.06) 0%,transparent 65%);pointer-events:none"></div>
-    <!-- Linha decorativa topo -->
-    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#0d2137,#1d4ed8,#2d6a4f,transparent);pointer-events:none"></div>
-    <!-- Marca d'água -->
-    <div style="position:absolute;bottom:-10px;right:-10px;width:340px;height:340px;opacity:0.05;pointer-events:none;transform:rotate(-8deg)">
-      <img src="https://obliant.com.br/wp-content/uploads/2025/09/Logo.png" alt="" style="width:100%;filter:grayscale(1) contrast(3)">
-    </div>
+  <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:48px;background:#f0f7f4;position:relative;overflow-y:auto;overflow-x:hidden;">
     <div style="width:100%;max-width:1180px;position:relative">
       <!-- Header -->
       <div style="margin-bottom:24px">
@@ -265,10 +256,6 @@ textarea{resize:vertical;min-height:60px}
           <div class="proj-new" onclick="newProject()" style="margin-top:auto">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo projeto
-          </div>
-          <div class="proj-new" onclick="carregarExemplo()" style="margin-top:8px;border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-l)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Carregar projeto de exemplo (dados fictícios)
           </div>
         </div>
         <div class="landing-panel landing-panel-totvs">
@@ -305,7 +292,7 @@ textarea{resize:vertical;min-height:60px}
 
 <!-- PORTFOLIO TOTVS SCREEN (independente de qualquer projeto do PM Tool) -->
 <div class="proj-screen" id="portfolio-screen">
-  <div style="flex:1;overflow-y:auto;padding:48px;background:var(--bg)">
+  <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
     <div style="max-width:900px;margin:0 auto">
       <div class="topbar">
         <div><h2 style="font-size:22px">🧭 Gestão de Portfólio TOTVS</h2><div class="topbar-sub">Torres/verticais que você acompanha — escopo, contatos, observações e marcos — independente dos projetos do PM Tool</div></div>
@@ -1418,72 +1405,6 @@ function createProject(){
   document.querySelectorAll('.nav-item')[1].classList.add('active');
   pendingNewProject=true;
   loadConfigFields();
-}
-
-function carregarExemplo(){
-  var d = defaultProjectData();
-  d.project = {nome:'Transformação Digital — Onboarding Financeiro', cliente:'Banco Meridiano (fictício)', inicio:'2026-03-02', fim:'2026-09-30', gp:'Ana Duarte', status:'warn', obs:'Projeto de demonstração com dados fictícios.'};
-  d.tasks = [
-    {id:1,fase:'1. Descoberta & Planejamento',nome:'Kickoff & alinhamento de escopo',ini:'2026-03-02',fim:'2026-03-06',dur:5,resp:'Ana Duarte',status:'concluido',isMarco:false},
-    {id:2,fase:'1. Descoberta & Planejamento',nome:'Levantamento de requisitos',ini:'2026-03-09',fim:'2026-03-27',dur:15,resp:'Bruno Salles',status:'concluido',isMarco:true},
-    {id:3,fase:'1. Descoberta & Planejamento',nome:'Mapa de processos AS-IS',ini:'2026-03-16',fim:'2026-03-31',dur:12,resp:'Ana Duarte',status:'concluido',isMarco:false},
-    {id:4,fase:'2. Desenho da Solução',nome:'Arquitetura da solução',ini:'2026-04-01',fim:'2026-04-17',dur:13,resp:'Carla Nunes',status:'concluido',isMarco:false},
-    {id:5,fase:'2. Desenho da Solução',nome:'Desenho TO-BE & aprovação do cliente',ini:'2026-04-13',fim:'2026-04-30',dur:14,resp:'Bruno Salles',status:'concluido',isMarco:true},
-    {id:6,fase:'3. Desenvolvimento',nome:'Setup de ambiente & CI/CD',ini:'2026-05-04',fim:'2026-05-15',dur:10,resp:'Diego Rocha',status:'concluido',isMarco:false},
-    {id:7,fase:'3. Desenvolvimento',nome:'Módulo de cadastro de clientes',ini:'2026-05-18',fim:'2026-06-19',dur:25,resp:'Diego Rocha',status:'concluido',isMarco:false},
-    {id:8,fase:'3. Desenvolvimento',nome:'Integração com core bancário',ini:'2026-06-01',fim:'2026-07-17',dur:34,resp:'Carla Nunes',status:'em-progresso',isMarco:false},
-    {id:9,fase:'3. Desenvolvimento',nome:'Motor de regras de crédito',ini:'2026-06-15',fim:'2026-07-31',dur:34,resp:'Diego Rocha',status:'em-atraso',isMarco:false},
-    {id:10,fase:'3. Desenvolvimento',nome:'Portal do cliente',ini:'2026-07-01',fim:'2026-08-14',dur:33,resp:'Elena Prado',status:'em-progresso',isMarco:false},
-    {id:11,fase:'3. Desenvolvimento',nome:'Relatórios regulatórios',ini:'2026-06-22',fim:'2026-08-01',dur:29,resp:'Bruno Salles',status:'nao-iniciado',isMarco:false},
-    {id:12,fase:'4. Testes & Homologação',nome:'Testes integrados',ini:'2026-08-17',fim:'2026-09-04',dur:15,resp:'Ana Duarte',status:'nao-iniciado',isMarco:false},
-    {id:13,fase:'4. Testes & Homologação',nome:'Homologação com o cliente',ini:'2026-09-07',fim:'2026-09-11',dur:5,resp:'Carla Nunes',status:'nao-iniciado',isMarco:true},
-    {id:14,fase:'5. Go-live & Suporte',nome:'Go-live',ini:'2026-09-14',fim:'2026-09-16',dur:3,resp:'Diego Rocha',status:'nao-iniciado',isMarco:true},
-    {id:15,fase:'5. Go-live & Suporte',nome:'Estabilização & handover',ini:'2026-09-17',fim:'2026-09-30',dur:10,resp:'Elena Prado',status:'nao-iniciado',isMarco:false}
-  ];
-  d.marcos = [
-    {id:21,nome:'Requisitos aprovados',fase:'1. Descoberta & Planejamento',planDate:'2026-03-27',realDate:'2026-03-27',status:'ok'},
-    {id:22,nome:'Solução aprovada pelo cliente',fase:'2. Desenho da Solução',planDate:'2026-04-30',realDate:'2026-05-05',status:'ok'},
-    {id:23,nome:'Core bancário integrado',fase:'3. Desenvolvimento',planDate:'2026-07-17',realDate:'',status:'progress'},
-    {id:24,nome:'Motor de crédito entregue',fase:'3. Desenvolvimento',planDate:'2026-06-30',realDate:'',status:'crit'},
-    {id:25,nome:'Homologação concluída',fase:'4. Testes & Homologação',planDate:'2026-09-11',realDate:'',status:'future'},
-    {id:26,nome:'Go-live em produção',fase:'5. Go-live & Suporte',planDate:'2026-09-16',realDate:'',status:'future'}
-  ];
-  d.consultores = [
-    {id:31,nome:'Ana Duarte',perfil:'Gerente de Projeto',valorHora:320,totalHoras:280,
-      horasPlan:{'2026-03':40,'2026-04':40,'2026-05':40,'2026-06':40,'2026-07':40,'2026-08':40,'2026-09':40},
-      horasReal:{'2026-03':40,'2026-04':44,'2026-05':42,'2026-06':46,'2026-07':16}},
-    {id:32,nome:'Bruno Salles',perfil:'Consultor Sênior',valorHora:260,totalHoras:360,
-      horasPlan:{'2026-03':60,'2026-04':70,'2026-05':50,'2026-06':50,'2026-07':50,'2026-08':50,'2026-09':30},
-      horasReal:{'2026-03':64,'2026-04':72,'2026-05':56,'2026-06':58,'2026-07':20}},
-    {id:33,nome:'Carla Nunes',perfil:'Arquiteta de Soluções',valorHora:300,totalHoras:300,
-      horasPlan:{'2026-03':20,'2026-04':60,'2026-05':60,'2026-06':60,'2026-07':50,'2026-08':30,'2026-09':20},
-      horasReal:{'2026-03':22,'2026-04':66,'2026-05':64,'2026-06':66,'2026-07':24}},
-    {id:34,nome:'Diego Rocha',perfil:'Desenvolvedor Sênior',valorHora:240,totalHoras:520,
-      horasPlan:{'2026-03':20,'2026-04':40,'2026-05':90,'2026-06':110,'2026-07':100,'2026-08':100,'2026-09':60},
-      horasReal:{'2026-03':24,'2026-04':44,'2026-05':98,'2026-06':120,'2026-07':40}},
-    {id:35,nome:'Elena Prado',perfil:'Desenvolvedora Pleno',valorHora:180,totalHoras:440,
-      horasPlan:{'2026-03':0,'2026-04':20,'2026-05':70,'2026-06':90,'2026-07':100,'2026-08':100,'2026-09':60},
-      horasReal:{'2026-03':0,'2026-04':22,'2026-05':76,'2026-06':98,'2026-07':34}}
-  ];
-  d.riscos = [
-    {id:41,desc:'Aprovação regulatória do Bacen pode atrasar o motor de crédito',prob:'alta',impacto:'medio',status:'mitigando',data:'2026-06-10',plano:'Antecipar submissão e acompanhamento semanal com o jurídico.'},
-    {id:42,desc:'Equipe de desenvolvimento subdimensionada para os relatórios regulatórios',prob:'media',impacto:'alto',status:'identificado',data:'2026-06-25',plano:'Avaliar alocação de +1 desenvolvedor a partir de julho.'},
-    {id:43,desc:'Documentação incompleta do core bancário legado',prob:'media',impacto:'medio',status:'mitigando',data:'2026-06-05',plano:'Sessões técnicas semanais com o fornecedor do core.'},
-    {id:44,desc:'Indisponibilidade do ambiente de homologação do cliente',prob:'baixa',impacto:'medio',status:'resolvido',data:'2026-05-12',plano:'Ambiente provisionado em maio.'}
-  ];
-  d.notas = [
-    {id:51,texto:'Cliente sinalizou interesse em antecipar o go-live; avaliar impacto no cronograma e nas horas.',data:'2026-06-28',cat:'cliente',fase:''},
-    {id:52,texto:'Decisão: adotar arquitetura de microsserviços no portal do cliente.',data:'2026-04-15',cat:'decisao',fase:''}
-  ];
-  d.nextId = 100;
-
-  var id = 'demo' + Date.now();
-  saveProjectData(id, d);
-  var list = getProjectList();
-  list.push({id:id, name:d.project.nome, createdAt:new Date().toISOString()});
-  saveProjectList(list);
-  toast('Projeto de exemplo criado!');
-  openProject(id);
 }
 
 function deleteProject(id){
