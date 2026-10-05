@@ -49,7 +49,7 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 /* CENTRAL SHELL */
 #central-sidebar{z-index:600;overflow-y:auto}
 #welcome-screen.active ~ #central-sidebar{display:none}
-#proj-screen,#portfolio-screen,#embed-screen{left:240px}
+#proj-screen,#portfolio-screen,#embed-screen,#projetos-screen{left:240px}
 .cnav-section{padding:16px 20px 6px;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.3)}
 .cnav-item{display:flex;align-items:center;gap:10px;padding:8px 20px;font-size:13px;color:rgba(255,255,255,.55);cursor:pointer;border-left:2px solid transparent;transition:all .15s}
 .cnav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
@@ -309,6 +309,21 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
+<!-- PROJETOS SCREEN (lista de projetos do PM Tool) -->
+<div class="proj-screen" id="projetos-screen">
+  <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
+    <div style="max-width:900px;margin:0 auto">
+      <div class="topbar">
+        <div><h2 style="font-size:22px">📁 Gestão de Projetos</h2><div class="topbar-sub">Projetos do PM Tool — cronograma, horas, marcos e indicadores</div></div>
+        <button class="btn btn-primary btn-sm" onclick="newProject()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo projeto
+        </button>
+      </div>
+      <div class="proj-list" id="proj-list-page"></div>
+    </div>
+  </div>
+</div>
+
 <!-- EMBED SCREEN (Demandas / Novos Projetos / Horas, embutidos sem barra própria) -->
 <div class="proj-screen" id="embed-screen">
   <iframe id="embedFrame" style="flex:1 1 auto;width:100%;border:0;min-height:0"></iframe>
@@ -323,6 +338,7 @@ textarea{resize:vertical;min-height:60px}
   </div>
   <div class="cnav-item" data-c="home" onclick="centralGo('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Início</div>
   <div class="cnav-section">Gestão PMO</div>
+  <div class="cnav-item" data-c="projetos" onclick="centralGo('projetos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Projetos</div>
   <div class="cnav-item" data-c="demandas" onclick="centralGo('demandas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Demandas</div>
   <div class="cnav-item" data-c="novosprojetos" onclick="centralGo('novosprojetos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novos Projetos</div>
   <div class="cnav-item" data-c="horas" onclick="centralGo('horas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Horas</div>
@@ -330,11 +346,11 @@ textarea{resize:vertical;min-height:60px}
   <div class="cnav-item" data-c="portfolio" onclick="centralGo('portfolio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>Portfólio TOTVS</div>
   <div id="cnav-project" style="display:none">
     <div class="cnav-section">Projeto aberto</div>
-    <div class="proj-switcher" onclick="showProjectScreen()">
+    <div class="proj-switcher" onclick="centralGo('projetos')">
       <div class="proj-switcher-label">Projeto</div>
       <div class="proj-switcher-name" id="sidebar-proj-name">—</div>
       <div id="sidebar-proj-status" style="margin-top:4px"></div>
-      <div class="proj-switcher-hint">↩ voltar à Central</div>
+      <div class="proj-switcher-hint">↩ voltar aos projetos</div>
     </div>
     
     <div class="nav">
@@ -1223,7 +1239,7 @@ function centralMark(key){
   var pn=document.getElementById('cnav-project'); if(pn) pn.style.display=(key==='project')?'block':'none';
 }
 function centralHideScreens(){
-  ['welcome-screen','proj-screen','portfolio-screen','embed-screen'].forEach(function(id){
+  ['welcome-screen','proj-screen','portfolio-screen','embed-screen','projetos-screen'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.classList.remove('active');
   });
   document.getElementById('app').style.display='none';
@@ -1242,6 +1258,7 @@ function showEmbed(key){
 function centralGo(key){
   if(key==='home'){ showProjectScreen(); return; }
   if(key==='portfolio'){ showPortfolioTotvs(); return; }
+  if(key==='projetos'){ centralHideScreens(); document.getElementById('projetos-screen').classList.add('active'); centralMark('projetos'); renderProjectList(); return; }
   showEmbed(key);
   centralMark(key);
 }
@@ -1322,7 +1339,11 @@ function renderProjectList(){
   if(sp) sp.textContent=list.length;
   if(st) st.textContent=totalTarefas;
   if(sc) sc.textContent=totalConsultores;
-  var el = document.getElementById('proj-list-screen');
+  ['proj-list-screen','proj-list-page'].forEach(function(id){
+    var el=document.getElementById(id); if(el) fillProjectList(el,list);
+  });
+}
+function fillProjectList(el,list){
   if(!list.length){
     el.innerHTML = '<p style="font-size:13px;color:var(--text2);text-align:center;padding:16px 0">Nenhum projeto ainda. Crie o primeiro!</p>';
     return;
