@@ -46,6 +46,15 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .landing-panel-totvs{border-color:rgba(29,78,216,.22);background:linear-gradient(160deg,#fff 0%,#f6f9ff 100%)}
 .landing-panel-demandas{border-color:rgba(180,83,9,.22);background:linear-gradient(160deg,#fff 0%,#fff9ef 100%)}
 
+/* CENTRAL SHELL */
+#central-sidebar{z-index:600;overflow-y:auto}
+#welcome-screen.active ~ #central-sidebar{display:none}
+#proj-screen,#portfolio-screen,#embed-screen{left:240px}
+.cnav-section{padding:16px 20px 6px;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.3)}
+.cnav-item{display:flex;align-items:center;gap:10px;padding:8px 20px;font-size:13px;color:rgba(255,255,255,.55);cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.cnav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
+.cnav-item.active{color:#fff;border-left-color:#6EE7B7;background:rgba(255,255,255,.07)}
+.cnav-item svg{width:16px;height:16px;flex-shrink:0}
 /* MAIN APP */
 .shell{display:flex;min-height:100vh}
 .sidebar{width:240px;min-height:100vh;background:linear-gradient(180deg,#0a1628 0%,#0d2137 60%,#091520 100%);color:#fff;display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;z-index:100}
@@ -227,21 +236,8 @@ textarea{resize:vertical;min-height:60px}
 
 <!-- PROJECT SELECTOR -->
 <div class="proj-screen" id="proj-screen">
-  <!-- Left panel - branding -->
-  <div style="position:fixed;left:0;top:0;bottom:0;width:400px;background:linear-gradient(160deg,#0a1628 0%,#0d2137 40%,#0a1f35 70%,#061420 100%);display:flex;flex-direction:column;justify-content:center;padding:56px 48px;">
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(29,78,216,0.15) 0%,transparent 60%);pointer-events:none"></div>
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 80% 20%,rgba(45,106,79,0.1) 0%,transparent 50%);pointer-events:none"></div>
-    <div style="position:relative">
-      <img src="https://obliant.com.br/wp-content/uploads/2025/09/Logo.png" alt="Obliant" style="height:40px;margin-bottom:56px;filter:brightness(0) invert(1)">
-      <div style="width:32px;height:2px;background:linear-gradient(90deg,#6EE7B7,#378ADD);border-radius:2px;margin-bottom:20px"></div>
-      <div style="color:rgba(255,255,255,.35);font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;margin-bottom:14px">Project Track</div>
-      <h2 style="color:#fff;font-size:32px;font-weight:600;line-height:1.25;margin-bottom:20px;letter-spacing:-.3px">Gestão de<br>Projetos</h2>
-      <p style="color:rgba(255,255,255,.4);font-size:13px;line-height:1.8">Acompanhe cronogramas, horas,<br>marcos e indicadores em tempo real.</p>
-    </div>
-  </div>
-
   <!-- Right panel -->
-  <div style="margin-left:400px;flex:1;display:flex;align-items:flex-start;justify-content:center;padding:48px;background:linear-gradient(150deg,#f0f4ff 0%,#f5f9f7 40%,#eef6f2 100%);position:relative;overflow-y:auto;overflow-x:hidden;">
+  <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:48px;background:linear-gradient(150deg,#f0f4ff 0%,#f5f9f7 40%,#eef6f2 100%);position:relative;overflow-y:auto;overflow-x:hidden;">
     <!-- Elementos decorativos inspirados na Obliant -->
     <div style="position:absolute;top:-120px;right:-120px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(13,33,55,0.05) 0%,transparent 65%);pointer-events:none"></div>
     <div style="position:absolute;bottom:-80px;left:-40px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(45,106,79,0.06) 0%,transparent 65%);pointer-events:none"></div>
@@ -256,7 +252,7 @@ textarea{resize:vertical;min-height:60px}
       <div style="margin-bottom:24px">
         <div id="gestor-greeting" style="font-size:13px;color:var(--accent);font-weight:500;margin-bottom:8px"></div>
         <h1 style="font-size:24px;font-weight:600;color:#0d2137;margin-bottom:6px">Central Obliant</h1>
-        <p style="font-size:13px;color:var(--text2)">Escolha um projeto do PM Tool ou acesse o portfólio TOTVS.</p>
+        <p style="font-size:13px;color:var(--text2)">Acesso rápido às suas ferramentas — o menu à esquerda leva a todas.</p>
       </div>
       <!-- Two-column landing -->
       <div class="landing-grid">
@@ -311,7 +307,6 @@ textarea{resize:vertical;min-height:60px}
 <div class="proj-screen" id="portfolio-screen">
   <div style="flex:1;overflow-y:auto;padding:48px;background:var(--bg)">
     <div style="max-width:900px;margin:0 auto">
-      <div onclick="showProjectScreen()" style="font-size:12px;color:var(--accent);font-weight:600;cursor:pointer;margin-bottom:14px;display:inline-block">← Voltar aos projetos</div>
       <div class="topbar">
         <div><h2 style="font-size:22px">🧭 Gestão de Portfólio TOTVS</h2><div class="topbar-sub">Torres/verticais que você acompanha — escopo, contatos, observações e marcos — independente dos projetos do PM Tool</div></div>
         <button class="btn btn-primary btn-sm" onclick="openAddPortItem()">
@@ -327,30 +322,34 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<!-- DEMANDAS PMO SCREEN (embute o app publicado de Demandas PMO) -->
-<div class="proj-screen" id="demandas-screen" style="flex-direction:column">
-  <div style="flex:0 0 auto;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border)">
-    <span onclick="showProjectScreen()" style="font-size:12px;color:var(--accent);font-weight:600;cursor:pointer">← Voltar aos projetos</span>
-  </div>
-  <iframe id="demandasFrame" src="https://obliant.github.io/demandas-pmo/" style="flex:1 1 auto;width:100%;border:0;min-height:0"></iframe>
+<!-- EMBED SCREEN (Demandas / Novos Projetos / Horas, embutidos sem barra própria) -->
+<div class="proj-screen" id="embed-screen">
+  <iframe id="embedFrame" style="flex:1 1 auto;width:100%;border:0;min-height:0"></iframe>
 </div>
 
-<!-- MAIN APP -->
-<div class="shell" id="app" style="display:none">
-  <nav class="sidebar">
-    <!-- Decorative elements -->
-    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#1d4ed8,#2d6a4f);pointer-events:none"></div>
-    <div style="position:absolute;bottom:-60px;right:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(29,78,216,0.08) 0%,transparent 70%);pointer-events:none"></div>
-    <div class="sidebar-logo" style="border-bottom:1px solid rgba(255,255,255,0.07)">
-      <img src="https://obliant.com.br/wp-content/uploads/2025/09/Logo.png" alt="Obliant" style="height:24px;filter:brightness(0) invert(1);margin-bottom:6px">
-      <p style="color:rgba(255,255,255,.3);font-size:10px;letter-spacing:.08em">Project Track</p>
-    </div>
+<!-- CENTRAL SIDEBAR (única e fixa em todas as telas) -->
+<nav class="sidebar" id="central-sidebar">
+  <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#1d4ed8,#2d6a4f);pointer-events:none"></div>
+  <div class="sidebar-logo" style="border-bottom:1px solid rgba(255,255,255,0.07)">
+    <img src="https://obliant.com.br/wp-content/uploads/2025/09/Logo.png" alt="Obliant" style="height:24px;filter:brightness(0) invert(1);margin-bottom:6px">
+    <p style="color:rgba(255,255,255,.3);font-size:10px;letter-spacing:.08em">Central Obliant</p>
+  </div>
+  <div class="cnav-item" data-c="home" onclick="centralGo('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Início</div>
+  <div class="cnav-section">Gestão PMO</div>
+  <div class="cnav-item" data-c="demandas" onclick="centralGo('demandas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Demandas</div>
+  <div class="cnav-item" data-c="novosprojetos" onclick="centralGo('novosprojetos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novos Projetos</div>
+  <div class="cnav-item" data-c="horas" onclick="centralGo('horas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Horas</div>
+  <div class="cnav-section">Gestão TOTVS</div>
+  <div class="cnav-item" data-c="portfolio" onclick="centralGo('portfolio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>Portfólio TOTVS</div>
+  <div id="cnav-project" style="display:none">
+    <div class="cnav-section">Projeto aberto</div>
     <div class="proj-switcher" onclick="showProjectScreen()">
       <div class="proj-switcher-label">Projeto</div>
       <div class="proj-switcher-name" id="sidebar-proj-name">—</div>
       <div id="sidebar-proj-status" style="margin-top:4px"></div>
-      <div class="proj-switcher-hint">↩ voltar ao portfólio</div>
+      <div class="proj-switcher-hint">↩ voltar à Central</div>
     </div>
+    
     <div class="nav">
       <div class="nav-item" onclick="goPage('instrucoes')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Instruções de uso
@@ -377,11 +376,18 @@ textarea{resize:vertical;min-height:60px}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
       </div>
     </div>
-    <div class="sidebar-footer">
+    
+  </div>
+  <div class="sidebar-footer">
       <div id="sidebar-gestor" style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px"></div>
       <p>Dados salvos localmente</p>
     </div>
-  </nav>
+  
+</nav>
+
+<!-- MAIN APP -->
+<div class="shell" id="app" style="display:none">
+  
 
   <main class="main">
     <!-- DASHBOARD -->
@@ -1094,10 +1100,8 @@ function saveGestor(){
   if(!nome){ toast('Informe seu nome'); return; }
   var cargo=document.getElementById('welcome-cargo').value.trim();
   localStorage.setItem('pt_gestor', JSON.stringify({nome:nome, cargo:cargo}));
-  document.getElementById('welcome-screen').classList.remove('active');
-  document.getElementById('proj-screen').classList.add('active');
   updateGestorUI();
-  renderProjectList();
+  showProjectScreen();
 }
 function updateGestorUI(){
   var g=getGestor(); if(!g) return;
@@ -1227,18 +1231,40 @@ function migratePmtoolLegacyData(){
 }
 
 // ─── PROJECT SCREEN ───────────────────────────────────────────────────────────
-function showProjectScreen(){
-  var portEl=document.getElementById('portfolio-screen'); if(portEl) portEl.classList.remove('active');
-  var demEl=document.getElementById('demandas-screen'); if(demEl) demEl.classList.remove('active');
-  document.getElementById('proj-screen').classList.add('active');
+function centralMark(key){
+  document.querySelectorAll('.cnav-item').forEach(function(n){ n.classList.toggle('active', n.dataset.c===key); });
+  var pn=document.getElementById('cnav-project'); if(pn) pn.style.display=(key==='project')?'block':'none';
+}
+function centralHideScreens(){
+  ['welcome-screen','proj-screen','portfolio-screen','embed-screen'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.classList.remove('active');
+  });
   document.getElementById('app').style.display='none';
+}
+var DEMANDAS_URL='https://obliant.github.io/demandas-pmo/';
+function showEmbed(key){
+  centralHideScreens();
+  var fr=document.getElementById('embedFrame');
+  if(!fr.getAttribute('src')){
+    fr.src=DEMANDAS_URL+'?embed=1#'+key;
+  } else if(fr.contentWindow){
+    fr.contentWindow.postMessage({centralGo:key},'*');
+  }
+  document.getElementById('embed-screen').classList.add('active');
+}
+function centralGo(key){
+  if(key==='home'){ showProjectScreen(); return; }
+  if(key==='portfolio'){ showPortfolioTotvs(); return; }
+  showEmbed(key);
+  centralMark(key);
+}
+function showProjectScreen(){
+  centralHideScreens();
+  document.getElementById('proj-screen').classList.add('active');
+  centralMark('home');
   renderProjectList();
 }
-function showDemandasPMO(){
-  document.getElementById('welcome-screen').classList.remove('active');
-  document.getElementById('proj-screen').classList.remove('active');
-  document.getElementById('demandas-screen').classList.add('active');
-}
+function showDemandasPMO(){ centralGo('demandas'); }
 
 // ─── PORTFOLIO TOTVS (espaço independente, fora de qualquer projeto do PM Tool) ──
 var PORTFOLIO_KEY='pt_portfolio_totvs';
@@ -1254,10 +1280,9 @@ function loadPortfolioData(){
 }
 function savePortfolioData(){ localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(portfolioData)); }
 function showPortfolioTotvs(){
-  document.getElementById('welcome-screen').classList.remove('active');
-  document.getElementById('proj-screen').classList.remove('active');
-  var demEl=document.getElementById('demandas-screen'); if(demEl) demEl.classList.remove('active');
+  centralHideScreens();
   document.getElementById('portfolio-screen').classList.add('active');
+  centralMark('portfolio');
   portfolioData=loadPortfolioData();
   renderPortfolioScreen();
 }
@@ -1353,8 +1378,9 @@ function renderProjectList(){
 function openProject(id){
   activeProjectId = id;
   state = loadProjectData(id);
-  document.getElementById('proj-screen').classList.remove('active');
+  centralHideScreens();
   document.getElementById('app').style.display='flex';
+  centralMark('project');
   updateSidebar();
   goPage('dashboard');
 }
@@ -1382,8 +1408,9 @@ function createProject(){
   activeProjectId = id;
   state = data;
   closeModal('modal-new-proj');
-  document.getElementById('proj-screen').classList.remove('active');
+  centralHideScreens();
   document.getElementById('app').style.display='flex';
+  centralMark('project');
   updateSidebar();
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
@@ -3560,9 +3587,8 @@ migrateOldData();
   if(!_g){
     document.getElementById('welcome-screen').classList.add('active');
   } else {
-    document.getElementById('proj-screen').classList.add('active');
     updateGestorUI();
-    renderProjectList();
+    showProjectScreen();
   }
 })();
 </script>
