@@ -3017,7 +3017,7 @@ function addPortPendencia(itemId){
   if(!texto){toast('Escreva a pendência');return;}
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   if(!it.pendencias) it.pendencias=[];
-  it.pendencias.push({id:portfolioData.nextId++,texto:texto,done:false,data:today()});
+  it.pendencias.unshift({id:portfolioData.nextId++,texto:texto,done:false,data:today()});
   savePortfolioData(); renderPortfolioScreen(); toast('Pendência adicionada');
 }
 function togglePortPendencia(itemId,pendId){
