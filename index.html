@@ -55,6 +55,7 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .cnav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
 .cnav-item.active{color:#fff;border-left-color:#6EE7B7;background:rgba(255,255,255,.07)}
 .cnav-item svg{width:16px;height:16px;flex-shrink:0}
+.obs-area{width:100%;min-height:90px;resize:vertical;line-height:1.55;font-size:13px;overflow:hidden}
 .central-back{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:14px}
 .central-back:hover{text-decoration:underline}
 .central-back-bar{flex:0 0 auto;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -1331,7 +1332,21 @@ function loadPortfolioData(){
     if(!d) d={itens:[],nextId:1};
     if(!d.itens) d.itens=[];
     if(!d.nextId) d.nextId=1;
-    if(applyPortfolioSeeds(d)) localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(d));
+    var mudou=applyPortfolioSeeds(d);
+    d.itens.forEach(function(it){
+      if(Array.isArray(it.obs)){
+        if(it.obs.length){
+          var partes=it.obs.map(function(o){
+            var proprio=/^(Modelo:|Status \/ cenário atual:)/.test(o.texto||'');
+            return (proprio||!o.data?'':fmtDate(o.data)+' — ')+(o.texto||'');
+          });
+          it.obsTexto=(it.obsTexto?it.obsTexto+'\n\n':'')+partes.join('\n\n');
+        }
+        delete it.obs; mudou=true;
+      }
+      if(typeof it.obsTexto!=='string') it.obsTexto='';
+    });
+    if(mudou) localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(d));
     return d;
   } catch(e){ return {itens:[],nextId:1}; }
 }
@@ -2977,20 +2992,12 @@ function deletePortAtencao(itemId,atId){
   it.atencao=(it.atencao||[]).filter(function(a){return a.id!==atId;});
   savePortfolioData(); renderPortfolioScreen(); toast('Excluído');
 }
-function addPortObs(itemId){
-  var ta=document.getElementById('pobs-texto-'+itemId);
-  var texto=ta.value.trim();
-  if(!texto){toast('Escreva a observação');return;}
+function escText(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function autoGrow(el){ el.style.height='auto'; el.style.height=(el.scrollHeight+2)+'px'; }
+function savePortObs(itemId,valor){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
-  if(!it.obs) it.obs=[];
-  it.obs.push({id:portfolioData.nextId++,data:today(),texto:texto});
-  savePortfolioData(); renderPortfolioScreen(); toast('Observação adicionada');
-}
-function deletePortObs(itemId,obsId){
-  if(!confirm('Excluir observação?')) return;
-  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
-  it.obs=(it.obs||[]).filter(function(o){return o.id!==obsId;});
-  savePortfolioData(); renderPortfolioScreen(); toast('Excluído');
+  it.obsTexto=valor;
+  savePortfolioData(); toast('Observações salvas');
 }
 function addPortPendencia(itemId){
   var input=document.getElementById('pend-texto-'+itemId);
@@ -3065,6 +3072,7 @@ function renderPortfolioScreen(){
       +(exp?portItemDetailHTML(it):'')
       +'</div>';
   }).join('');
+  document.querySelectorAll('#portfolio-list .obs-area').forEach(autoGrow);
 }
 function escAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
 function portContatoFormHTML(it){
@@ -3109,17 +3117,7 @@ function portItemDetailHTML(it){
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum ponto de atenção.</div>')
     +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="aten-texto-'+it.id+'" placeholder="Novo ponto de atenção..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortAtencao('+it.id+');}">'
     +'<button class="btn btn-sm" onclick="addPortAtencao('+it.id+')">+ Atenção</button></div>';
-  var obsList=(it.obs||[]).slice().sort(function(a,b){return (b.data||'').localeCompare(a.data||'');});
-  var obsHTML=(obsList.length
-    ? obsList.map(function(o){
-        return '<div style="padding:8px 0;border-top:1px solid var(--border);font-size:12px">'
-          +'<div style="display:flex;align-items:center;justify-content:space-between"><span class="mono" style="color:var(--text3)">'+fmtDate(o.data)+'</span>'
-          +'<button class="btn btn-sm btn-icon btn-danger" onclick="deletePortObs('+it.id+','+o.id+')" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button></div>'
-          +'<div style="margin-top:2px;white-space:pre-wrap">'+o.texto+'</div></div>';
-      }).join('')
-    : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhuma observação.</div>')
-    +'<div style="margin-top:8px"><textarea id="pobs-texto-'+it.id+'" rows="2" placeholder="Escreva uma observação... (Enter envia, Shift+Enter quebra linha)" style="margin-bottom:6px" onkeydown="if(event.key===\'Enter\' && !event.shiftKey){event.preventDefault();addPortObs('+it.id+');}"></textarea>'
-    +'<button class="btn btn-sm" onclick="addPortObs('+it.id+')">+ Observação</button></div>';
+  var obsHTML='<textarea class="obs-area" id="pobs-texto-'+it.id+'" placeholder="Modelo, status / cenário atual e demais observações..." oninput="autoGrow(this)" onchange="savePortObs('+it.id+',this.value)">'+escText(it.obsTexto)+'</textarea>';
   var pendList=it.pendencias||[];
   var pendOrdenadas=pendList.filter(function(p){return !p.done;}).concat(pendList.filter(function(p){return p.done;}));
   var pendHTML=(pendOrdenadas.length
@@ -3188,7 +3186,7 @@ function savePortItem(){
     var idx=portfolioData.itens.findIndex(function(x){return x.id===editingPortItemId;});
     if(idx>=0) portfolioData.itens[idx]=Object.assign(portfolioData.itens[idx],obj);
   } else {
-    obj.id=portfolioData.nextId++; obj.contatos=[]; obj.marcos=[]; obj.obs=[]; obj.atencao=[]; obj.pendencias=[];
+    obj.id=portfolioData.nextId++; obj.contatos=[]; obj.marcos=[]; obj.obsTexto=''; obj.atencao=[]; obj.pendencias=[];
     portfolioData.itens.push(obj);
     portExpandedId=obj.id;
   }
