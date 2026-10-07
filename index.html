@@ -1404,6 +1404,7 @@ function showPendenciasTotvs(){
   centralHideScreens();
   document.getElementById('pendencias-screen').classList.add('active');
   centralMark('pendencias');
+  pendRecentes={};
   portfolioData=loadPortfolioData();
   renderPendenciasScreen();
 }
@@ -3050,7 +3051,7 @@ function addPortPendencia(itemId){
 function togglePortPendencia(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
-  p.done=!p.done;
+  p.done=!p.done; pendRecentes[p.id]=true;
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
 }
 function deletePortPendencia(itemId,pendId){
@@ -3101,7 +3102,8 @@ function renderPortfolioScreen(){
 }
 /* ── Pendências por projeto (visão consolidada) ── */
 var pendFiltro='abertas';
-function setPendFiltro(f){ pendFiltro=f; renderPendenciasScreen(); }
+var pendRecentes={}; // pendências mexidas nesta visita: ficam no lugar até trocar de filtro/tela, pra lista não "pular"
+function setPendFiltro(f){ pendFiltro=f; pendRecentes={}; renderPendenciasScreen(); }
 function addPendView(itemId){
   var input=document.getElementById('pv-texto-'+itemId);
   var texto=input.value.trim();
@@ -3131,11 +3133,13 @@ function renderPendenciasScreen(){
   var cards=itens.map(function(it){
     var all=it.pendencias||[];
     var ab=all.filter(function(p){return !p.done;}), ok=all.filter(function(p){return p.done;});
-    var show=pendFiltro==='abertas'?ab:(pendFiltro==='concluidas'?ok:ab.concat(ok));
+    var show=all.filter(function(p){
+      return pendFiltro==='todas' || pendRecentes[p.id] || (pendFiltro==='abertas'?!p.done:p.done);
+    });
     return {it:it,ab:ab,ok:ok,show:show};
   });
-  // projetos com mais pendências abertas primeiro; os sem nada a mostrar saem da lista
-  var vis=cards.filter(function(c){return c.show.length;}).sort(function(a,b){return b.ab.length-a.ab.length;});
+  // ordem fixa do portfólio (não reordena ao marcar); os sem nada a mostrar saem da lista
+  var vis=cards.filter(function(c){return c.show.length;});
   var vazios=cards.filter(function(c){return !c.show.length;});
   var html=vis.map(function(c){
     var it=c.it;
