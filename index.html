@@ -1404,7 +1404,6 @@ function showPendenciasTotvs(){
   centralHideScreens();
   document.getElementById('pendencias-screen').classList.add('active');
   centralMark('pendencias');
-  pendRecentes={};
   portfolioData=loadPortfolioData();
   renderPendenciasScreen();
 }
@@ -3051,7 +3050,7 @@ function addPortPendencia(itemId){
 function togglePortPendencia(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
-  p.done=!p.done; pendRecentes[p.id]=true;
+  p.done=!p.done;
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
 }
 function deletePortPendencia(itemId,pendId){
@@ -3102,8 +3101,7 @@ function renderPortfolioScreen(){
 }
 /* ── Pendências por projeto (visão consolidada) ── */
 var pendFiltro='abertas';
-var pendRecentes={}; // pendências mexidas nesta visita: ficam no lugar até trocar de filtro/tela, pra lista não "pular"
-function setPendFiltro(f){ pendFiltro=f; pendRecentes={}; renderPendenciasScreen(); }
+function setPendFiltro(f){ pendFiltro=f; renderPendenciasScreen(); }
 function addPendView(itemId){
   var input=document.getElementById('pv-texto-'+itemId);
   var texto=input.value.trim();
@@ -3134,7 +3132,7 @@ function renderPendenciasScreen(){
     var all=it.pendencias||[];
     var ab=all.filter(function(p){return !p.done;}), ok=all.filter(function(p){return p.done;});
     var show=all.filter(function(p){
-      return pendFiltro==='todas' || pendRecentes[p.id] || (pendFiltro==='abertas'?!p.done:p.done);
+      return pendFiltro==='todas' || (pendFiltro==='abertas'?!p.done:p.done);
     });
     return {it:it,ab:ab,ok:ok,show:show};
   });
