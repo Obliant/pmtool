@@ -3100,7 +3100,29 @@ function portLookup(el){
   else if(d.f==='pend'){ obj=byId(it.pendencias); key='texto'; req=true; }
   else if(parts[0]==='contato'){ obj=byId(it.contatos); key=parts[1]; req=(key==='nome'); }
   else if(parts[0]==='marco'){ obj=byId(it.marcos); key=parts[1]; req=(key==='nome'); }
+  else if(parts[0]==='doc'){ obj=byId(it.docs); key=parts[1]; req=(key==='nome'); }
   return {it:it,obj:obj,key:key,req:req};
+}
+function normalizaUrl(u){
+  u=(u||'').trim();
+  if(!u) return '';
+  if(/^[a-z][a-z0-9+.-]*:/i.test(u)) return /^https?:\/\//i.test(u)?u:null;
+  return 'https://'+u;
+}
+function addPortDoc(itemId){
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var url=normalizaUrl(document.getElementById('doc-url-'+itemId).value);
+  if(!url){ toast(url===null?'Use um link http(s)':'Cole o link do documento'); return; }
+  var nome=document.getElementById('doc-nome-'+itemId).value.trim()||'Documento';
+  if(!it.docs) it.docs=[];
+  it.docs.unshift({id:portfolioData.nextId++,nome:nome,url:url});
+  savePortfolioData(); renderPortfolioScreen(); toast('Documento adicionado');
+}
+function deletePortDoc(itemId,docId){
+  if(!confirm('Remover este link de documento?')) return;
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  it.docs=(it.docs||[]).filter(function(d){return d.id!==docId;});
+  savePortfolioData(); renderPortfolioScreen(); toast('Removido');
 }
 function parseBRL(t){
   t=String(t).replace(/[^0-9,.-]/g,'');
@@ -3124,11 +3146,13 @@ function savePortField(el){
   var v=(el.tagName==='SPAN')?el.innerText.replace(/ /g,' '):el.value;
   v=multi?v.replace(/\s+$/,''):v.replace(/\s*\n\s*/g,' ').trim();
   if(r.key==='valor') v=parseBRL(v);
+  if(r.key==='url'){ v=normalizaUrl(v); if(v===null){ toast('Use um link http(s)'); if(el.tagName==='SPAN') el.textContent=r.obj.url||''; return; } }
   if(r.req && !v){ if(el.tagName==='SPAN') el.textContent=r.obj[r.key]; return; }
   var mudou=(r.obj[r.key]!==v);
   if(mudou){ r.obj[r.key]=v; savePortfolioData(); toast('Salvo'); }
   if(r.key==='valor') el.textContent=v?fmtBRL(v):'';
   if(el.dataset.f==='nome'){ var h=document.querySelector('#portcard-'+r.it.id+' .port-name'); if(h) h.textContent=v; }
+  if(r.key==='url'){ el.textContent=v; var row=el.closest('.port-row'); var lk=row&&row.querySelector('a.doc-open'); if(lk) lk.href=v||'#'; }
 }
 function delBtn(fn,a,b){
   return '<button class="btn btn-sm btn-icon btn-danger" onclick="'+fn+'('+a+','+b+')" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>';
@@ -3187,6 +3211,21 @@ function portItemDetailHTML(it){
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhuma pendência.</div>')
     +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="pend-texto-'+it.id+'" placeholder="Nova pendência..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortPendencia('+it.id+');}">'
     +'<button class="btn btn-sm" onclick="addPortPendencia('+it.id+')">+ Pendência</button></div>';
+  var docs=it.docs||[];
+  var docsHTML=(docs.length
+    ? docs.map(function(d){
+        return '<div class="port-row" style="border-top:1px solid var(--border);padding:6px 0;font-size:12px">'
+          +'<span>📎</span>'
+          +edSpan(da(it,'doc.nome',d.id),d.nome,false,'Nome do documento','ed-b')
+          +edSpan(da(it,'doc.url',d.id),d.url,false,'https://...','ed-mail')
+          +'<a class="doc-open btn btn-sm" href="'+escAttr(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Abrir ↗</a>'
+          +'<span style="margin-left:auto">'+delBtn('deletePortDoc',it.id,d.id)+'</span>'
+          +'</div>';
+      }).join('')
+    : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum documento.</div>')
+    +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input type="text" id="doc-nome-'+it.id+'" placeholder="Nome (ex: Escopo.docx)" style="flex:1;min-width:140px">'
+    +'<input type="text" id="doc-url-'+it.id+'" placeholder="Cole o link do SharePoint/OneDrive" style="flex:2;min-width:200px" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortDoc('+it.id+');}">'
+    +'<button class="btn btn-sm" onclick="addPortDoc('+it.id+')">+ Documento</button></div>';
   var marcos=it.marcos||[];
   var marcosHTML=marcos.length
     ? '<div style="overflow-x:auto"><table class="tbl" style="margin-top:4px"><thead><tr><th>Marco</th><th>Planejado</th><th>Status</th><th>Valor (R$)</th><th>Financeiro</th><th></th></tr></thead><tbody>'
@@ -3212,6 +3251,8 @@ function portItemDetailHTML(it){
     +obsHTML
     +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">✅ Pendências</div>'
     +pendHTML
+    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">📎 Documentos (links)</div>'
+    +docsHTML
     +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">👤 Contatos</div>'
     +contatosHTML
     +portContatoFormHTML(it)
