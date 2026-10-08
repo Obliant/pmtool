@@ -1356,6 +1356,39 @@ function applyPortfolioSeeds(d){
   d.seedsApplied.push('repasse-2026-10');
   return true;
 }
+// ─── Carga única: tema SPDM – Compras Digital (dashboards gerenciais/operacionais) ──
+function applySeedSpdm(d){
+  if(d.seedsApplied.indexOf('spdm-dashboards-2026-10')>=0) return false;
+  d.seedsApplied.push('spdm-dashboards-2026-10');
+  var hoje=today();
+  var it=d.itens.find(function(x){return portNorm(x.nome).indexOf('spdm')>=0;});
+  if(!it){ it={id:d.nextId++,nome:'SPDM – Compras Digital',objetivo:'',escopo:'',contatos:[],marcos:[],obs:[],atencao:[],pendencias:[],obsTexto:''}; d.itens.push(it); }
+  ['atencao','pendencias','contatos','marcos'].forEach(function(k){ if(!it[k]) it[k]=[]; });
+  var obs='Status / cenário atual: Os dashboards gerenciais e operacionais do Compras Digital fazem parte do escopo (conforme a Vanessa), mas a solução apresentada não atendeu às expectativas de usabilidade dos usuários. Alinhamento técnico já realizado com o Sérgio, que possui o dashboard de referência. Aguardando posicionamento do Fábio com a definição técnica de como atender a necessidade.';
+  if(Array.isArray(it.obs)&&it.obs.length) it.obs.push({id:d.nextId++,data:hoje,texto:obs});
+  else it.obsTexto=(it.obsTexto?it.obsTexto+'\n\n':'')+obs;
+  [ 'Insatisfação do Sr. Tadeu com os dashboards: ligou bastante chateado, junto com Roberto e Janaína.',
+    'O Fábio sinalizou limitações técnicas para disponibilizar os painéis diretamente no Compras Digital; a Suplavia precisa apresentar quais são e as soluções possíveis.',
+    'A princípio, não há indicação de que a SPDM aceitará construir os dashboards externamente ao Compras Digital.',
+    'O tema pode impactar a aderência funcional da solução e a homologação junto ao cliente.',
+    'Reclamação mais ampla do Sr. Tadeu e do Roberto sobre a condução da frente de Compras Digital (pontos abaixo).',
+    'Percepção de que o Sérgio, em alguns momentos, não demonstra domínio do histórico e das definições já tratadas no projeto.',
+    'Insatisfação com a postura e a comunicação com o cliente: dizer que a demanda é “muito difícil” ou se posicionar de forma muito técnica, sem antes trabalhar a necessidade com o usuário.',
+    'Complexidade, esforço e dificuldade técnica devem ser discutidos internamente, e não colocados dessa forma para o cliente.',
+    'Cobrança de atuação mais ativa do Fábio como coordenador: conduzir a reunião, fazer a interlocução com o time técnico e intervir quando necessário. Ele reconheceu que precisa atuar mais na condução das agendas.',
+    'Preocupação de que isso gere insegurança na SPDM, já que o projeto tem um histórico longo de discussões.',
+    'Gestão da frente não deve ficar a cargo de perfil técnico: a condução das agendas precisa ter postura de gestão.'
+  ].forEach(function(t){ it.atencao.push({id:d.nextId++,data:hoje,texto:t}); });
+  [ ['Suplavia apresentar as limitações técnicas, as alternativas/soluções possíveis e os esforços envolvidos',false],
+    ['Aguardar posicionamento do Fábio com a definição técnica de como atender a necessidade',false],
+    ['Avançar a definição do tema (impacta a aderência funcional e a homologação)',false],
+    ['Fábio alinhar diretamente com o Sérgio a postura e a comunicação com o cliente',false],
+    ['Fábio atuar mais na condução das agendas (conduzir, fazer a interlocução com o time técnico e intervir quando necessário)',false],
+    ['Próximas agendas com condução mais segura: pessoas contextualizadas e postura orientada à solução',false],
+    ['Alinhamento técnico com o Sérgio (dashboard de referência) – concluído',true]
+  ].forEach(function(p){ it.pendencias.push({id:d.nextId++,texto:p[0],done:p[1],data:hoje}); });
+  return true;
+}
 function loadPortfolioData(){
   try{
     var d=JSON.parse(localStorage.getItem(PORTFOLIO_KEY));
@@ -1363,6 +1396,7 @@ function loadPortfolioData(){
     if(!d.itens) d.itens=[];
     if(!d.nextId) d.nextId=1;
     var mudou=applyPortfolioSeeds(d);
+    if(applySeedSpdm(d)) mudou=true;
     d.itens.forEach(function(it){
       if(Array.isArray(it.obs)){
         if(it.obs.length){
