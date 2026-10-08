@@ -1357,6 +1357,35 @@ function applyPortfolioSeeds(d){
   return true;
 }
 // ─── Carga única: tema SPDM – Compras Digital (dashboards gerenciais/operacionais) ──
+var SPDM_ATENCAO_BLOCO='Dashboards gerenciais e operacionais: o Sr. Tadeu ficou insatisfeito (ligou chateado, junto com Roberto e Janaína). O Fábio sinalizou limitações técnicas para disponibilizar os painéis no Compras Digital; a Suplavia precisa apresentar quais são e as soluções possíveis. A princípio, não há indicação de que a SPDM aceitará construir os dashboards fora do Compras Digital. O tema pode impactar a aderência funcional e a homologação junto ao cliente.\n\n'
+  +'Condução da frente (reclamação do Sr. Tadeu e do Roberto): o Sérgio, em alguns momentos, não demonstra domínio do histórico e das definições já tratadas; insatisfação com a postura e a comunicação com o cliente (dizer que a demanda é “muito difícil” ou ser muito técnico sem antes trabalhar a necessidade com o usuário); complexidade, esforço e dificuldade técnica devem ser discutidos internamente, não com o cliente; cobrança de atuação mais ativa do Fábio como coordenador (conduzir a reunião, fazer a interlocução com o time técnico e intervir quando necessário), que reconheceu precisar atuar mais. Isso gera insegurança na SPDM, já que o projeto tem um histórico longo de discussões.\n\n'
+  +'Gestão da frente não deve ficar a cargo de perfil técnico: a condução das agendas precisa ter postura de gestão.';
+var SPDM_ATENCAO_ANTIGOS=['Insatisfação do Sr. Tadeu com os dashboards: ligou bastante chateado, junto com Roberto e Janaína.',
+    'O Fábio sinalizou limitações técnicas para disponibilizar os painéis diretamente no Compras Digital; a Suplavia precisa apresentar quais são e as soluções possíveis.',
+    'A princípio, não há indicação de que a SPDM aceitará construir os dashboards externamente ao Compras Digital.',
+    'O tema pode impactar a aderência funcional da solução e a homologação junto ao cliente.',
+    'Reclamação mais ampla do Sr. Tadeu e do Roberto sobre a condução da frente de Compras Digital (pontos abaixo).',
+    'Percepção de que o Sérgio, em alguns momentos, não demonstra domínio do histórico e das definições já tratadas no projeto.',
+    'Insatisfação com a postura e a comunicação com o cliente: dizer que a demanda é “muito difícil” ou se posicionar de forma muito técnica, sem antes trabalhar a necessidade com o usuário.',
+    'Complexidade, esforço e dificuldade técnica devem ser discutidos internamente, e não colocados dessa forma para o cliente.',
+    'Cobrança de atuação mais ativa do Fábio como coordenador: conduzir a reunião, fazer a interlocução com o time técnico e intervir quando necessário. Ele reconheceu que precisa atuar mais na condução das agendas.',
+    'Preocupação de que isso gere insegurança na SPDM, já que o projeto tem um histórico longo de discussões.',
+    'Gestão da frente não deve ficar a cargo de perfil técnico: a condução das agendas precisa ter postura de gestão.'];
+// quem já recebeu a primeira versão (11 itens soltos): troca por 1 bloco só
+function applySpdmAtencaoBloco(d){
+  if(d.seedsApplied.indexOf('spdm-atencao-1bloco')>=0) return false;
+  d.seedsApplied.push('spdm-atencao-1bloco');
+  var it=d.itens.find(function(x){return portNorm(x.nome).indexOf('spdm')>=0;});
+  if(!it||!it.atencao) return true;
+  var pos=-1, hoje=today();
+  it.atencao=it.atencao.filter(function(a,i){
+    if(SPDM_ATENCAO_ANTIGOS.indexOf(a.texto)<0) return true;
+    if(pos<0) pos=i; return false;
+  });
+  if(pos<0) return true;
+  it.atencao.splice(Math.min(pos,it.atencao.length),0,{id:d.nextId++,data:hoje,texto:SPDM_ATENCAO_BLOCO});
+  return true;
+}
 function applySeedSpdm(d){
   if(d.seedsApplied.indexOf('spdm-dashboards-2026-10')>=0) return false;
   d.seedsApplied.push('spdm-dashboards-2026-10');
@@ -1367,18 +1396,8 @@ function applySeedSpdm(d){
   var obs='Status / cenário atual: Os dashboards gerenciais e operacionais do Compras Digital fazem parte do escopo (conforme a Vanessa), mas a solução apresentada não atendeu às expectativas de usabilidade dos usuários. Alinhamento técnico já realizado com o Sérgio, que possui o dashboard de referência. Aguardando posicionamento do Fábio com a definição técnica de como atender a necessidade.';
   if(Array.isArray(it.obs)&&it.obs.length) it.obs.push({id:d.nextId++,data:hoje,texto:obs});
   else it.obsTexto=(it.obsTexto?it.obsTexto+'\n\n':'')+obs;
-  [ 'Insatisfação do Sr. Tadeu com os dashboards: ligou bastante chateado, junto com Roberto e Janaína.',
-    'O Fábio sinalizou limitações técnicas para disponibilizar os painéis diretamente no Compras Digital; a Suplavia precisa apresentar quais são e as soluções possíveis.',
-    'A princípio, não há indicação de que a SPDM aceitará construir os dashboards externamente ao Compras Digital.',
-    'O tema pode impactar a aderência funcional da solução e a homologação junto ao cliente.',
-    'Reclamação mais ampla do Sr. Tadeu e do Roberto sobre a condução da frente de Compras Digital (pontos abaixo).',
-    'Percepção de que o Sérgio, em alguns momentos, não demonstra domínio do histórico e das definições já tratadas no projeto.',
-    'Insatisfação com a postura e a comunicação com o cliente: dizer que a demanda é “muito difícil” ou se posicionar de forma muito técnica, sem antes trabalhar a necessidade com o usuário.',
-    'Complexidade, esforço e dificuldade técnica devem ser discutidos internamente, e não colocados dessa forma para o cliente.',
-    'Cobrança de atuação mais ativa do Fábio como coordenador: conduzir a reunião, fazer a interlocução com o time técnico e intervir quando necessário. Ele reconheceu que precisa atuar mais na condução das agendas.',
-    'Preocupação de que isso gere insegurança na SPDM, já que o projeto tem um histórico longo de discussões.',
-    'Gestão da frente não deve ficar a cargo de perfil técnico: a condução das agendas precisa ter postura de gestão.'
-  ].forEach(function(t){ it.atencao.push({id:d.nextId++,data:hoje,texto:t}); });
+  it.atencao.push({id:d.nextId++,data:hoje,texto:SPDM_ATENCAO_BLOCO});
+  d.seedsApplied.push('spdm-atencao-1bloco');
   [ ['Suplavia apresentar as limitações técnicas, as alternativas/soluções possíveis e os esforços envolvidos',false],
     ['Aguardar posicionamento do Fábio com a definição técnica de como atender a necessidade',false],
     ['Avançar a definição do tema (impacta a aderência funcional e a homologação)',false],
@@ -1397,6 +1416,7 @@ function loadPortfolioData(){
     if(!d.nextId) d.nextId=1;
     var mudou=applyPortfolioSeeds(d);
     if(applySeedSpdm(d)) mudou=true;
+    if(applySpdmAtencaoBloco(d)) mudou=true;
     d.itens.forEach(function(it){
       if(Array.isArray(it.obs)){
         if(it.obs.length){
