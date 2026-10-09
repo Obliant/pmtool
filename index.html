@@ -3922,6 +3922,14 @@ migrateOldData();
     showProjectScreen();
   }
 })();
+// Selecionar/copiar texto: se há texto selecionado, o "soltar o mouse" não conta como clique (não abre card, linha, etc.)
+document.addEventListener('click',function(e){
+  var s=window.getSelection&&window.getSelection();
+  if(!s||s.isCollapsed||!s.toString().trim()) return;
+  var t=e.target;
+  if(!t||!t.closest||t.closest('input,textarea,select,button,a,label')) return;
+  if((s.containsNode&&s.containsNode(t,true))||(t.contains&&t.contains(s.anchorNode))){ e.stopPropagation(); }
+},true);
 </script>
 </body>
 </html>
