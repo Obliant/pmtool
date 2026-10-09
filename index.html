@@ -79,6 +79,12 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .psec-all{font-size:11px;color:var(--text3);text-align:right;margin-bottom:2px}
 .psec-all a{color:var(--text2);cursor:pointer;text-decoration:underline}
 .pend-done .ed{text-decoration:line-through;color:var(--text3)}
+.pend-drag{cursor:grab;color:var(--text3);font-size:15px;line-height:1;width:12px;text-align:center;user-select:none;flex-shrink:0}
+.pend-drag:hover{color:var(--accent)}
+.pend-drag-ph{width:12px;flex-shrink:0}
+.pend-row.dragging{opacity:.4}
+.pend-row.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+.pend-row.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
 .doc-row{flex-wrap:nowrap}
 .doc-row>*{flex-shrink:0}
 .doc-row .ed-b{max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3117,6 +3123,49 @@ function addPortPendencia(itemId){
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); toast('Pendência adicionada');
   var again=document.getElementById('pend-texto-'+itemId); if(again) again.focus(); // cursor segue na caixinha
 }
+// arrastar pendência: solta antes/depois de outra pendência em aberto do mesmo projeto
+function movePortPendencia(itemId,pendId,targetId,after){
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it||pendId===targetId) return;
+  var p=(it.pendencias||[]).find(function(x){return x.id===pendId;}); if(!p) return;
+  it.pendencias=it.pendencias.filter(function(x){return x.id!==pendId;});
+  var i=it.pendencias.findIndex(function(x){return x.id===targetId;});
+  if(i<0){ it.pendencias.push(p); return; }
+  it.pendencias.splice(i+(after?1:0),0,p);
+  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
+}
+(function(){
+  var drag=null;
+  function limpa(){ document.querySelectorAll('.pend-row.drop-before,.pend-row.drop-after,.pend-row.dragging').forEach(function(el){ el.classList.remove('drop-before','drop-after','dragging'); }); }
+  function alvo(e){ return e.target.closest&&e.target.closest('.pend-row[data-open="1"]'); }
+  function soltaDepois(e,row){ var r=row.getBoundingClientRect(); return e.clientY>r.top+r.height/2; }
+  function soltaDraggable(){ document.querySelectorAll('.pend-row[draggable="true"]').forEach(function(r){ r.draggable=false; }); }
+  document.addEventListener('mousedown',function(e){
+    var h=e.target.closest&&e.target.closest('.pend-drag');
+    if(h) h.closest('.pend-row').draggable=true;
+  });
+  document.addEventListener('dragstart',function(e){
+    var row=alvo(e); if(!row||!row.draggable) return;
+    drag={it:row.dataset.it,pend:row.dataset.pend};
+    e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',drag.pend);
+    row.classList.add('dragging');
+  });
+  document.addEventListener('dragover',function(e){
+    var row=alvo(e);
+    if(!drag||!row||row.dataset.it!==drag.it||row.dataset.pend===drag.pend) return;
+    e.preventDefault();
+    document.querySelectorAll('.pend-row.drop-before,.pend-row.drop-after').forEach(function(el){ el.classList.remove('drop-before','drop-after'); });
+    row.classList.add(soltaDepois(e,row)?'drop-after':'drop-before');
+  });
+  document.addEventListener('drop',function(e){
+    var row=alvo(e);
+    if(!drag||!row||row.dataset.it!==drag.it) return;
+    e.preventDefault();
+    var d=drag, depois=soltaDepois(e,row); drag=null; limpa();
+    movePortPendencia(parseInt(d.it,10),parseInt(d.pend,10),parseInt(row.dataset.pend,10),depois);
+  });
+  document.addEventListener('dragend',function(){ drag=null; limpa(); soltaDraggable(); });
+  document.addEventListener('mouseup',soltaDraggable);
+})();
 function togglePortPendencia(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
@@ -3212,7 +3261,8 @@ function renderPendenciasScreen(){
   var html=vis.map(function(c){
     var it=c.it;
     var rows=c.show.map(function(p){
-      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
+      return '<div class="pend-row" data-it="'+it.id+'" data-pend="'+p.id+'" data-open="'+(p.done?'0':'1')+'" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
+          +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
         +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
         +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
         +'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
@@ -3383,7 +3433,8 @@ function portItemDetailHTML(it){
   var pendOrdenadas=pendList.filter(function(p){return !p.done;}).concat(pendList.filter(function(p){return p.done;}));
   var pendHTML=(pendOrdenadas.length
     ? pendOrdenadas.map(function(p){
-        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
+        return '<div class="pend-row" data-it="'+it.id+'" data-pend="'+p.id+'" data-open="'+(p.done?'0':'1')+'" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
+          +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
           +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
           +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
           +'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
