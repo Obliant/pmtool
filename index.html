@@ -69,6 +69,15 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .ed-ml{display:block;white-space:pre-wrap;min-height:22px;line-height:1.55}
 .ed-b{font-weight:600}
 .ed-mail{color:var(--accent)}
+.psec{margin-top:12px}
+.psec-h{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:4px 0}
+.psec-h:hover .card-title{color:var(--text2)}
+.psec-caret{font-size:17px;line-height:1;width:14px;color:var(--text2)}
+.psec-n{font-size:11px;background:#e3eee8;border-radius:999px;padding:1px 8px;color:var(--text2)}
+.psec-body{padding-top:4px}
+.psec.collapsed .psec-body{display:none}
+.psec-all{font-size:11px;color:var(--text3);text-align:right;margin-bottom:2px}
+.psec-all a{color:var(--text2);cursor:pointer;text-decoration:underline}
 .doc-row{flex-wrap:nowrap}
 .doc-row>*{flex-shrink:0}
 .doc-row .ed-b{max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3322,6 +3331,27 @@ function portContatoFormHTML(it){
     +'<button class="btn btn-primary btn-sm" onclick="saveInlinePortContato('+it.id+')">Adicionar contato</button>'
     +'</div>';
 }
+var PORT_SECS=['objetivo','escopo','atencao','obs','contatos','marcos','docs','pend'];
+var portColl=(function(){ try{ return JSON.parse(localStorage.getItem('pt_port_collapsed'))||{}; }catch(e){ return {}; } })();
+function isPortColl(key){ return portColl[key]===undefined ? key!=='pend' : !!portColl[key]; }
+function savePortColl(){ try{ localStorage.setItem('pt_port_collapsed',JSON.stringify(portColl)); }catch(e){} }
+function psec(key,titulo,count,body,action){
+  var col=isPortColl(key);
+  return '<div class="psec'+(col?' collapsed':'')+'" data-sec="'+key+'">'
+    +'<div class="psec-h" onclick="togglePortSec(\''+key+'\')"><span class="psec-caret">'+(col?'▸':'▾')+'</span>'
+    +'<span class="card-title" style="margin:0;font-size:12px">'+titulo+'</span>'
+    +(count!=null?'<span class="psec-n">'+count+'</span>':'')
+    +(action?'<span style="margin-left:auto" onclick="event.stopPropagation()">'+action+'</span>':'')
+    +'</div><div class="psec-body">'+body+'</div></div>';
+}
+function paintPortSec(key){
+  document.querySelectorAll('.psec[data-sec="'+key+'"]').forEach(function(el){
+    el.classList.toggle('collapsed',isPortColl(key));
+    var c=el.querySelector('.psec-caret'); if(c) c.textContent=isPortColl(key)?'▸':'▾';
+  });
+}
+function togglePortSec(key){ portColl[key]=!isPortColl(key); savePortColl(); paintPortSec(key); }
+function setAllPortSec(col){ PORT_SECS.forEach(function(k){ portColl[k]=col; paintPortSec(k); }); savePortColl(); }
 function portItemDetailHTML(it){
   var contatos=it.contatos||[];
   var contatosHTML=contatos.length
@@ -3391,23 +3421,15 @@ function portItemDetailHTML(it){
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
     +'<div class="card-title" style="margin-bottom:4px;font-size:12px">🏷️ Nome</div>'
     +'<div style="font-size:14px;font-weight:600;margin-bottom:14px">'+edSpan(da(it,'nome'),it.nome,false,'Nome do projeto')+'</div>'
-    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">🎯 Objetivo</div>'
-    +'<div style="font-size:13px;margin-bottom:14px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>'
-    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">📋 Escopo</div>'
-    +'<div style="font-size:13px;margin-bottom:14px">'+edSpan(da(it,'escopo'),it.escopo,true,'Clique para escrever o escopo')+'</div>'
-    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">⚠️ Pontos de atenção</div>'
-    +atenHTML
-    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">🗒️ Observações</div>'
-    +obsHTML
-    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">✅ Pendências</div>'
-    +pendHTML
-    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">📎 Documentos (links)</div>'
-    +docsHTML
-    +'<div class="card-title" style="margin:16px 0 4px;font-size:12px">👤 Contatos</div>'
-    +contatosHTML
-    +portContatoFormHTML(it)
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 4px"><div class="card-title" style="margin-bottom:0;font-size:12px">🚩 Marcos</div><button class="btn btn-sm" onclick="openAddPortMarco('+it.id+')">+ Marco</button></div>'
-    +marcosHTML
+    +'<div class="psec-all"><a onclick="setAllPortSec(true)">Recolher tudo</a> · <a onclick="setAllPortSec(false)">Expandir tudo</a></div>'
+    +psec('objetivo','🎯 Objetivo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>')
+    +psec('escopo','📋 Escopo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'escopo'),it.escopo,true,'Clique para escrever o escopo')+'</div>')
+    +psec('atencao','⚠️ Pontos de atenção',(it.atencao||[]).length||null,atenHTML)
+    +psec('obs','🗒️ Observações',null,obsHTML)
+    +psec('contatos','👤 Contatos',(it.contatos||[]).length||null,contatosHTML+portContatoFormHTML(it))
+    +psec('marcos','🚩 Marcos',marcos.length||null,marcosHTML,'<button class="btn btn-sm" onclick="openAddPortMarco('+it.id+')">+ Marco</button>')
+    +psec('docs','📎 Documentos (links)',docs.length||null,docsHTML)
+    +psec('pend','✅ Pendências',(pendList.filter(function(p){return !p.done;}).length||null)&&(pendList.filter(function(p){return !p.done;}).length+' aberta'+(pendList.filter(function(p){return !p.done;}).length===1?'':'s')),pendHTML)
     +'</div>';
 }
 function togglePortItem(id){ portExpandedId=(portExpandedId===id)?null:id; renderPortfolioScreen(); }
