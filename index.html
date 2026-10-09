@@ -3922,14 +3922,27 @@ migrateOldData();
     showProjectScreen();
   }
 })();
-// Selecionar/copiar texto: se há texto selecionado, o "soltar o mouse" não conta como clique (não abre card, linha, etc.)
-document.addEventListener('click',function(e){
-  var s=window.getSelection&&window.getSelection();
-  if(!s||s.isCollapsed||!s.toString().trim()) return;
-  var t=e.target;
-  if(!t||!t.closest||t.closest('input,textarea,select,button,a,label')) return;
-  if((s.containsNode&&s.containsNode(t,true))||(t.contains&&t.contains(s.anchorNode))){ e.stopPropagation(); }
-},true);
+// Selecionar/copiar texto: arrastar o mouse (ou soltar fora do campo) não conta como clique — não abre card/linha nem fecha janelas
+(function(){
+  var down=null;
+  document.addEventListener('mousedown',function(e){ down={x:e.clientX,y:e.clientY,t:e.target}; },true);
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    // 1) o mouse foi arrastado entre apertar e soltar: foi seleção de texto, não clique
+    if(down&&e.detail>0){
+      var dx=e.clientX-down.x, dy=e.clientY-down.y;
+      var arrastou=(dx*dx+dy*dy)>25;
+      var saiu=down.t!==t&&t.contains&&t.contains(down.t)&&(dx*dx+dy*dy)>4;
+      if(arrastou||saiu){ down=null; e.stopPropagation(); return; }
+    }
+    down=null;
+    // 2) já existe texto selecionado na área clicada
+    var s=window.getSelection&&window.getSelection();
+    if(!s||s.isCollapsed||!s.toString().trim()) return;
+    if(!t||!t.closest||t.closest('input,textarea,select,button,a,label')) return;
+    if((s.containsNode&&s.containsNode(t,true))||(t.contains&&t.contains(s.anchorNode))){ e.stopPropagation(); }
+  },true);
+})();
 </script>
 </body>
 </html>
