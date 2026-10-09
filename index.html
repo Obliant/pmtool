@@ -3115,6 +3115,7 @@ function addPortPendencia(itemId){
   if(!it.pendencias) it.pendencias=[];
   it.pendencias.unshift({id:portfolioData.nextId++,texto:texto,done:false,data:today()});
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); toast('Pendência adicionada');
+  var again=document.getElementById('pend-texto-'+itemId); if(again) again.focus(); // cursor segue na caixinha
 }
 function togglePortPendencia(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
