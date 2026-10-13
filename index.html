@@ -3326,13 +3326,20 @@ function normalizaUrl(u){
   return 'https://'+u;
 }
 // clique abre o documento (link normal, nova aba); Shift+clique transforma o link em campo editável
+function editarLinkDoc(el){
+  el.classList.add("ed");
+  el.setAttribute("contenteditable","plaintext-only");
+  el.focus();
+  var sel=window.getSelection(), rg=document.createRange(); rg.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(rg);
+}
 function docLinkClick(e,el){
   if(!e.shiftKey) return;
   e.preventDefault();
-  el.classList.add('ed');
-  el.setAttribute('contenteditable','plaintext-only');
-  el.focus();
-  var sel=window.getSelection(), rg=document.createRange(); rg.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(rg);
+  editarLinkDoc(el);
+}
+function docEditBtn(btn){
+  var row=btn.closest(".port-row"), a=row&&row.querySelector("a.doc-link");
+  if(a) editarLinkDoc(a);
 }
 function addPortDoc(itemId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
@@ -3464,8 +3471,10 @@ function portItemDetailHTML(it){
         return '<div class="port-row doc-row" style="border-top:1px solid var(--border);padding:6px 0;font-size:12px">'
           +'<span>📎</span>'
           +edSpan(da(it,'doc.nome',d.id),d.nome,false,'Nome do documento','ed-b')
-          +'<a class="doc-link ed-mail" href="'+escAttr(d.url)+'" target="_blank" rel="noopener" '+da(it,'doc.url',d.id)+' data-ph="https://..." title="Clique para abrir o documento · Shift+clique para editar o link" onclick="docLinkClick(event,this)" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(d.url)+'</a>'
-          +'<span>'+delBtn('deletePortDoc',it.id,d.id)+'</span>'
+          +'<a class="doc-link ed-mail" href="'+escAttr(d.url)+'" target="_blank" rel="noopener" '+da(it,'doc.url',d.id)+' data-ph="https://..." title="Clique para abrir o documento · use &quot;Editar link&quot; para atualizar" onclick="docLinkClick(event,this)" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(d.url)+'</a>'
+          +'<span style="display:flex;gap:4px">'
+          +'<button class="btn btn-sm" onclick="docEditBtn(this)" title="Atualizar o link deste documento" style="white-space:nowrap">✎ Editar link</button>'
+          +delBtn('deletePortDoc',it.id,d.id)+'</span>'
           +'</div>';
       }).join('')
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum documento.</div>')
