@@ -3223,7 +3223,8 @@ function portCardHTML(it){
     var resumo=nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s');
   return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togglePortItem('+it.id+')">'
-      +'<div><div class="port-name" style="font-weight:600;font-size:15px" onclick="event.stopPropagation()" title="Clique para editar o nome">'+edSpan(da(it,'nome'),it.nome,false,'Nome do projeto','ed-b')+'</div>'
+      +'<div><div class="port-name pv-nome" title="Clique para abrir o projeto">'
+      +'<span class="nome-txt" '+da(it,'nome')+' data-ph="Nome do projeto" onclick="if(this.isContentEditable)event.stopPropagation()" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(it.nome)+'</span></div>'
       +'<div style="font-size:13px;margin-top:3px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',true,'+ do que se trata (ex: RM + Ahgora) — Enter cria nova linha')+'</div>'
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+resumo+'</div></div>'
       +'<div style="display:flex;align-items:center;gap:4px">'
@@ -3478,7 +3479,14 @@ function edKey(e,el){
   if(e.key==='Enter' && !el.classList.contains('ed-ml')){ e.preventDefault(); el.blur(); }
   else if(e.key==='Escape'){ el.blur(); }
 }
+function renomearProjeto(id){
+  var sp=document.querySelector('#portcard-'+id+' .nome-txt'); if(!sp) return;
+  sp.classList.add('ed'); sp.setAttribute('contenteditable','plaintext-only'); sp.focus();
+  var sel=window.getSelection(), rg=document.createRange(); rg.selectNodeContents(sp); sel.removeAllRanges(); sel.addRange(rg);
+  sp.scrollIntoView({block:'nearest'});
+}
 function savePortField(el){
+  if(el.classList&&el.classList.contains('nome-txt')){ el.removeAttribute('contenteditable'); el.classList.remove('ed'); }
   var r=portLookup(el);
   if(!r.obj) return;
   var multi=el.classList.contains('ed-ml');
@@ -3605,6 +3613,7 @@ function portItemDetailHTML(it){
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
     +'<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px"><span class="card-title" style="margin:0;font-size:12px">📂 Carteira</span>'
     +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
+    +'<button class="btn btn-sm" style="margin-left:auto" onclick="renomearProjeto('+it.id+')" title="Editar o nome deste projeto">✎ Renomear</button>'
     +'</div>'
     +'<div class="psec-all"><a onclick="setAllPortSec(true)">Recolher tudo</a> · <a onclick="setAllPortSec(false)">Expandir tudo</a></div>'
     +psec('objetivo','🎯 Objetivo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>')
