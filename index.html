@@ -1501,7 +1501,7 @@ function renderPortfolioPreview(){
   el.innerHTML=itens.map(function(it){
     var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
     return '<div class="port-prev" onclick="openPortfolioItem('+it.id+')" title="Abrir este projeto">'
-      +'<span style="font-weight:500">'+it.nome+'</span>'
+      +'<span><span style="font-weight:500">'+it.nome+'</span>'+(it.resumo?'<span style="font-size:12px;color:var(--text2)"> — '+escText(it.resumo)+'</span>':'')+'</span>'
       +'<span style="font-size:11px;color:var(--text2)">'+nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s')+'</span>'
       +'</div>';
   }).join('');
@@ -3208,6 +3208,7 @@ function renderPortfolioScreen(){
     return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togglePortItem('+it.id+')">'
       +'<div><div class="port-name" style="font-weight:600;font-size:14px">'+escText(it.nome)+'</div>'
+      +'<div style="font-size:13px;margin-top:3px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',false,'+ do que se trata (ex: RM + Ahgora)')+'</div>'
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+resumo+'</div></div>'
       +'<div style="display:flex;align-items:center;gap:4px">'
       +'<button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deletePortItem('+it.id+')" title="Excluir projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
@@ -3272,6 +3273,7 @@ function renderPendenciasScreen(){
     return '<div class="card" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
       +'<div><div style="font-weight:600;font-size:14px">'+escText(it.nome)+'</div>'
+      +(it.resumo?'<div style="font-size:13px;margin-top:2px">'+escText(it.resumo)+'</div>':'')
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
       +'<button class="btn btn-sm" onclick="openPortfolioItem('+it.id+')">Abrir projeto →</button></div>'
       +rows
@@ -3306,7 +3308,7 @@ function portLookup(el){
   if(!it) return {};
   var id=(d.id!=null)?parseInt(d.id,10):null, parts=d.f.split('.'), obj=null, key=null, req=false;
   function byId(list){ return (list||[]).find(function(x){return x.id===id;}); }
-  if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'){ obj=it; key=d.f; req=(d.f==='nome'); }
+  if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'||d.f==='resumo'){ obj=it; key=d.f; req=(d.f==='nome'); }
   else if(d.f==='atencao'){ obj=byId(it.atencao); key='texto'; req=true; }
   else if(d.f==='pend'){ obj=byId(it.pendencias); key='texto'; req=true; }
   else if(parts[0]==='contato'){ obj=byId(it.contatos); key=parts[1]; req=(key==='nome'); }
