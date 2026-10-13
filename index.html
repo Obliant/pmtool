@@ -85,6 +85,9 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .pend-row.dragging{opacity:.4}
 .pend-row.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
 .pend-row.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+.doc-link{text-decoration:none;cursor:pointer}
+.doc-link:hover{text-decoration:underline}
+.doc-link.ed{text-decoration:none;cursor:text}
 .doc-row{flex-wrap:nowrap}
 .doc-row>*{flex-shrink:0}
 .doc-row .ed-b{max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3322,6 +3325,15 @@ function normalizaUrl(u){
   if(/^[a-z][a-z0-9+.-]*:/i.test(u)) return /^https?:\/\//i.test(u)?u:null;
   return 'https://'+u;
 }
+// clique abre o documento (link normal, nova aba); Shift+clique transforma o link em campo editável
+function docLinkClick(e,el){
+  if(!e.shiftKey) return;
+  e.preventDefault();
+  el.classList.add('ed');
+  el.setAttribute('contenteditable','plaintext-only');
+  el.focus();
+  var sel=window.getSelection(), rg=document.createRange(); rg.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(rg);
+}
 function addPortDoc(itemId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var url=normalizaUrl(document.getElementById('doc-url-'+itemId).value);
@@ -3356,16 +3368,16 @@ function savePortField(el){
   var r=portLookup(el);
   if(!r.obj) return;
   var multi=el.classList.contains('ed-ml');
-  var v=(el.tagName==='SPAN')?el.innerText.replace(/ /g,' '):el.value;
+  var v=(el.tagName==='SPAN'||el.tagName==='A')?el.innerText.replace(/ /g,' '):el.value;
   v=multi?v.replace(/\s+$/,''):v.replace(/\s*\n\s*/g,' ').trim();
   if(r.key==='valor') v=parseBRL(v);
-  if(r.key==='url'){ v=normalizaUrl(v); if(v===null){ toast('Use um link http(s)'); if(el.tagName==='SPAN') el.textContent=r.obj.url||''; return; } }
+  if(r.key==='url'){ v=normalizaUrl(v); if(v===null){ toast('Use um link http(s)'); if(el.tagName!=='INPUT') el.textContent=r.obj.url||''; if(el.tagName==='A'){ el.classList.remove('ed'); el.removeAttribute('contenteditable'); } return; } }
   if(r.req && !v){ if(el.tagName==='SPAN') el.textContent=r.obj[r.key]; return; }
   var mudou=(r.obj[r.key]!==v);
   if(mudou){ r.obj[r.key]=v; savePortfolioData(); toast('Salvo'); }
   if(r.key==='valor') el.textContent=v?fmtBRL(v):'';
   if(el.dataset.f==='nome'){ var h=document.querySelector('#portcard-'+r.it.id+' .port-name'); if(h) h.textContent=v; }
-  if(r.key==='url'){ el.textContent=v; var row=el.closest('.port-row'); var lk=row&&row.querySelector('a.doc-open'); if(lk) lk.href=v||'#'; }
+  if(r.key==='url'){ el.textContent=v; if(el.tagName==='A'){ el.href=v||'#'; el.classList.remove('ed'); el.removeAttribute('contenteditable'); } }
 }
 function delBtn(fn,a,b){
   return '<button class="btn btn-sm btn-icon btn-danger" onclick="'+fn+'('+a+','+b+')" title="Excluir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>';
@@ -3452,8 +3464,7 @@ function portItemDetailHTML(it){
         return '<div class="port-row doc-row" style="border-top:1px solid var(--border);padding:6px 0;font-size:12px">'
           +'<span>📎</span>'
           +edSpan(da(it,'doc.nome',d.id),d.nome,false,'Nome do documento','ed-b')
-          +edSpan(da(it,'doc.url',d.id),d.url,false,'https://...','ed-mail')
-          +'<a class="doc-open btn btn-sm" href="'+escAttr(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Abrir ↗</a>'
+          +'<a class="doc-link ed-mail" href="'+escAttr(d.url)+'" target="_blank" rel="noopener" '+da(it,'doc.url',d.id)+' data-ph="https://..." title="Clique para abrir o documento · Shift+clique para editar o link" onclick="docLinkClick(event,this)" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(d.url)+'</a>'
           +'<span>'+delBtn('deletePortDoc',it.id,d.id)+'</span>'
           +'</div>';
       }).join('')
