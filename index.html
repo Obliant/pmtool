@@ -3313,7 +3313,13 @@ async function aiGerar(it,h){
     });
     if(!r.ok){
       aiFalhou[it.id]=h;
-      aiErro[it.id]=(r.status===401)?'Chave inválida ou sem permissão.':(r.status===429)?'Limite de uso da chave atingido. Tente mais tarde.':('A IA não respondeu (erro '+r.status+').');
+      var det=''; try{ var ej=await r.json(); det=(ej&&ej.error&&ej.error.message)||''; }catch(e){}
+      var base=(r.status===401)?'A Anthropic não reconheceu essa chave (apagada, copiada pela metade ou de outro tipo). Gere uma nova em console.anthropic.com e cole de novo.'
+        :(r.status===403)?'Essa chave não tem permissão para usar este modelo.'
+        :(r.status===429)?'Limite de uso da chave atingido. Tente mais tarde.'
+        :(r.status===400&&/credit/i.test(det))?'A conta da API está sem créditos. Adicione saldo em console.anthropic.com → Plans & Billing.'
+        :('A IA não respondeu (erro '+r.status+').');
+      aiErro[it.id]=base+(det?' ['+det+']':'');
     } else {
       var j=await r.json();
       var txt=((j.content||[]).map(function(c){return c.text||'';}).join('')).trim();
@@ -3334,7 +3340,7 @@ function aiGerarUm(id){
   delete aiFalhou[id]; aiGerar(it,aiHash(it));
 }
 function aiSalvarChave(){
-  var v=(document.getElementById('ia-key-input').value||'').trim();
+  var v=(document.getElementById('ia-key-input').value||'').replace(/\s+/g,'');
   if(!/^sk-ant-/.test(v)){ toast('Essa não parece uma chave da Anthropic (começa com sk-ant-)'); return; }
   try{ localStorage.setItem(AI_KEY_LS,v); }catch(e){ toast('Não consegui guardar a chave neste navegador'); return; }
   aiFalhou={}; toast('Chave guardada — gerando os resumos'); renderPendenciasScreen(); aiRun();
@@ -3352,7 +3358,7 @@ function renderIaBar(){
       +'<a style="cursor:pointer;text-decoration:underline" onclick="aiAtualizarTodos()">Atualizar todos agora</a> · '
       +'<a style="cursor:pointer;text-decoration:underline" onclick="aiRemoverChave()">Remover chave</a></div>';
   } else {
-    el.innerHTML='<div class="ia-bar">🤖 <b>Resumo inteligente (opcional).</b> Para a IA resumir em que pé está cada projeto, cole aqui uma chave de API da Anthropic. Ela fica guardada só neste navegador. '
+    el.innerHTML='<div class="ia-bar">🤖 <b>Resumo inteligente (opcional).</b> Para a IA resumir em que pé está cada projeto, cole aqui uma chave de API da Anthropic. Ela fica guardada só neste navegador. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--accent)">Onde pego a chave? ↗</a> (Create Key → copie na hora, ela aparece uma vez só; é preciso ter saldo em Plans &amp; Billing.) '
       +'<div style="display:flex;gap:6px;margin-top:8px"><input type="password" id="ia-key-input" placeholder="sk-ant-..." autocomplete="off" onkeydown="if(event.key===\'Enter\'){event.preventDefault();aiSalvarChave();}">'
       +'<button class="btn btn-sm" onclick="aiSalvarChave()">Ativar</button></div></div>';
   }
