@@ -3204,7 +3204,7 @@ function deletePortMarco(itemId,marcoId){
 var portExpandedId=null; // só um item do portfólio fica aberto por vez
 var SEGS=[{k:'smb',label:'SMB',resp:'Fábio'},{k:'large',label:'Large',resp:'Daiane'}];
 function segInfo(k){ return SEGS.find(function(x){return x.k===k;})||null; }
-function segBadge(it){ var g=segInfo(it.segmento); return g?'<span class="psec-n" style="margin-left:6px" title="Carteira '+g.label+' · com '+g.resp+'">'+g.label+'</span>':''; }
+function segBadge(it){ var g=segInfo(it.segmento); return g?'<span class="psec-n" style="margin-left:6px" title="Carteira '+g.label+' · '+g.resp+'">'+g.label+'</span>':''; }
 function portCardHTML(it){
     var exp=(portExpandedId===it.id);
     var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
@@ -3240,7 +3240,7 @@ function renderPortfolioScreen(){
   }
   html+='<div class="seg-grid" style="grid-template-columns:'+cols+'">'+SEGS.map(function(g){
     var lista=items.filter(function(it){return it.segmento===g.k;});
-    return '<div class="seg-col"><div class="seg-col-h">'+g.label+' · com '+g.resp+' <span class="psec-n">'+lista.length+'</span></div>'
+    return '<div class="seg-col"><div class="seg-col-h">'+g.label+' · '+g.resp+' <span class="psec-n">'+lista.length+'</span></div>'
       +(lista.length?lista.map(portCardHTML).join(''):'<div class="seg-empty">Nenhum projeto aqui ainda. Dentro do projeto, em “Carteira”, escolha '+g.label+'.</div>')
       +'</div>';
   }).join('')+'</div>';
@@ -3520,7 +3520,7 @@ function portItemDetailHTML(it){
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>';
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
     +'<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px"><span class="card-title" style="margin:0;font-size:12px">📂 Carteira</span>'
-    +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · com Fábio'],['large','Large · com Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
+    +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
     +'</div>'
     +'<div class="psec-all"><a onclick="setAllPortSec(true)">Recolher tudo</a> · <a onclick="setAllPortSec(false)">Expandir tudo</a></div>'
     +psec('objetivo','🎯 Objetivo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>')
