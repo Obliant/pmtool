@@ -85,6 +85,11 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .pend-row.dragging{opacity:.4}
 .pend-row.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
 .pend-row.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+.seg-grid{display:grid;gap:18px;align-items:start}
+.seg-col{min-width:0}
+.seg-col-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:6px 0 10px}
+.seg-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border-md);border-radius:var(--r);padding:16px;text-align:center}
+@media(max-width:900px){.seg-grid{grid-template-columns:1fr!important}}
 .doc-link{text-decoration:none;cursor:pointer}
 .doc-link:hover{text-decoration:underline}
 .doc-link.ed{text-decoration:none;cursor:text}
@@ -336,7 +341,7 @@ textarea{resize:vertical;min-height:60px}
 <!-- PORTFOLIO TOTVS SCREEN (independente de qualquer projeto do PM Tool) -->
 <div class="proj-screen" id="portfolio-screen">
   <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
-    <div style="max-width:1200px;margin:0 auto">
+    <div style="max-width:1500px;margin:0 auto">
       <div class="topbar">
         <div><h2 style="font-size:22px">🧭 Gestão de Portfólio TOTVS</h2><div class="topbar-sub">Torres/verticais que você acompanha — escopo, contatos, observações e marcos — independente dos projetos do PM Tool</div></div>
         <button class="btn btn-primary btn-sm" onclick="openAddPortItem()">
@@ -1504,7 +1509,7 @@ function renderPortfolioPreview(){
   el.innerHTML=itens.map(function(it){
     var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
     return '<div class="port-prev" onclick="openPortfolioItem('+it.id+')" title="Abrir este projeto">'
-      +'<span><span style="font-weight:500">'+it.nome+'</span>'+(it.resumo?'<span style="font-size:12px;color:var(--text2)"> — '+escText(it.resumo.replace(/\s*\n\s*/g,' · '))+'</span>':'')+'</span>'
+      +'<span><span style="font-weight:500">'+it.nome+'</span>'+segBadge(it)+(it.resumo?'<span style="font-size:12px;color:var(--text2)"> — '+escText(it.resumo.replace(/\s*\n\s*/g,' · '))+'</span>':'')+'</span>'
       +'<span style="font-size:11px;color:var(--text2)">'+nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s')+'</span>'
       +'</div>';
   }).join('');
@@ -3197,18 +3202,14 @@ function deletePortMarco(itemId,marcoId){
 
 // ─── PORTFOLIO TOTVS (torres/verticais, espaço independente de qualquer projeto) ──
 var portExpandedId=null; // só um item do portfólio fica aberto por vez
-function renderPortfolioScreen(){
-  if(!portfolioData.itens) portfolioData.itens=[];
-  var items=portfolioData.itens;
-  var el=document.getElementById('portfolio-list');
-  var empty=document.getElementById('portfolio-empty');
-  if(!items.length){ el.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  el.innerHTML=items.map(function(it){
+var SEGS=[{k:'smb',label:'SMB',resp:'Fábio'},{k:'large',label:'Large',resp:'Daiane'}];
+function segInfo(k){ return SEGS.find(function(x){return x.k===k;})||null; }
+function segBadge(it){ var g=segInfo(it.segmento); return g?'<span class="psec-n" style="margin-left:6px" title="Carteira '+g.label+' · com '+g.resp+'">'+g.label+'</span>':''; }
+function portCardHTML(it){
     var exp=(portExpandedId===it.id);
     var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
     var resumo=nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s');
-    return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
+  return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togglePortItem('+it.id+')">'
       +'<div><div class="port-name" style="font-weight:600;font-size:15px" onclick="event.stopPropagation()" title="Clique para editar o nome">'+edSpan(da(it,'nome'),it.nome,false,'Nome do projeto','ed-b')+'</div>'
       +'<div style="font-size:13px;margin-top:3px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',true,'+ do que se trata (ex: RM + Ahgora) — Enter cria nova linha')+'</div>'
@@ -3219,7 +3220,31 @@ function renderPortfolioScreen(){
       +'</div></div>'
       +(exp?portItemDetailHTML(it):'')
       +'</div>';
-  }).join('');
+}
+function renderPortfolioScreen(){
+  if(!portfolioData.itens) portfolioData.itens=[];
+  var items=portfolioData.itens;
+  var el=document.getElementById('portfolio-list');
+  var empty=document.getElementById('portfolio-empty');
+  if(!items.length){ el.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  var sem=items.filter(function(it){return !segInfo(it.segmento);});
+  var expIt=items.find(function(it){return it.id===portExpandedId;});
+  var expSeg=expIt?expIt.segmento:null;
+  // o bloco do projeto aberto ganha mais largura; os dois lado a lado quando nada está aberto
+  var cols=(expSeg==='smb')?'2fr 1fr':(expSeg==='large')?'1fr 2fr':'1fr 1fr';
+  var html='';
+  if(sem.length){
+    html+='<div class="seg-col-h">Sem carteira definida <span class="psec-n">'+sem.length+'</span><span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— abra o projeto e escolha SMB ou Large em “Carteira”</span></div>'
+      +sem.map(portCardHTML).join('');
+  }
+  html+='<div class="seg-grid" style="grid-template-columns:'+cols+'">'+SEGS.map(function(g){
+    var lista=items.filter(function(it){return it.segmento===g.k;});
+    return '<div class="seg-col"><div class="seg-col-h">'+g.label+' · com '+g.resp+' <span class="psec-n">'+lista.length+'</span></div>'
+      +(lista.length?lista.map(portCardHTML).join(''):'<div class="seg-empty">Nenhum projeto aqui ainda. Dentro do projeto, em “Carteira”, escolha '+g.label+'.</div>')
+      +'</div>';
+  }).join('')+'</div>';
+  el.innerHTML=html;
   document.querySelectorAll('#portfolio-list .obs-area').forEach(autoGrow);
 }
 /* ── Pendências por projeto (visão consolidada) ── */
@@ -3275,7 +3300,7 @@ function renderPendenciasScreen(){
     }).join('');
     return '<div class="card" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
-      +'<div><div style="font-weight:600;font-size:14px">'+escText(it.nome)+'</div>'
+      +'<div><div style="font-weight:600;font-size:14px">'+escText(it.nome)+segBadge(it)+'</div>'
       +(it.resumo?'<div style="font-size:13px;margin-top:2px;white-space:pre-line">'+escText(it.resumo)+'</div>':'')
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
       +'<button class="btn btn-sm" onclick="openPortfolioItem('+it.id+')">Abrir projeto →</button></div>'
@@ -3311,7 +3336,7 @@ function portLookup(el){
   if(!it) return {};
   var id=(d.id!=null)?parseInt(d.id,10):null, parts=d.f.split('.'), obj=null, key=null, req=false;
   function byId(list){ return (list||[]).find(function(x){return x.id===id;}); }
-  if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'||d.f==='resumo'){ obj=it; key=d.f; req=(d.f==='nome'); }
+  if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'||d.f==='resumo'||d.f==='segmento'){ obj=it; key=d.f; req=(d.f==='nome'); }
   else if(d.f==='atencao'){ obj=byId(it.atencao); key='texto'; req=true; }
   else if(d.f==='pend'){ obj=byId(it.pendencias); key='texto'; req=true; }
   else if(parts[0]==='contato'){ obj=byId(it.contatos); key=parts[1]; req=(key==='nome'); }
@@ -3383,6 +3408,7 @@ function savePortField(el){
   var mudou=(r.obj[r.key]!==v);
   if(mudou){ r.obj[r.key]=v; savePortfolioData(); toast('Salvo'); }
   if(r.key==='valor') el.textContent=v?fmtBRL(v):'';
+  if(r.key==='segmento'&&mudou){ portExpandedId=r.it.id; renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview(); return; }
   if(r.key==='url'){ el.textContent=v; if(el.tagName==='A'){ el.href=v||'#'; el.classList.remove('ed'); el.removeAttribute('contenteditable'); } }
 }
 function delBtn(fn,a,b){
@@ -3493,6 +3519,9 @@ function portItemDetailHTML(it){
       }).join('')+'</tbody></table></div>'
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>';
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px"><span class="card-title" style="margin:0;font-size:12px">📂 Carteira</span>'
+    +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · com Fábio'],['large','Large · com Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
+    +'</div>'
     +'<div class="psec-all"><a onclick="setAllPortSec(true)">Recolher tudo</a> · <a onclick="setAllPortSec(false)">Expandir tudo</a></div>'
     +psec('objetivo','🎯 Objetivo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>')
     +psec('escopo','📋 Escopo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'escopo'),it.escopo,true,'Clique para escrever o escopo')+'</div>')
