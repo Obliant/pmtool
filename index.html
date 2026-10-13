@@ -90,6 +90,8 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .seg-col-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:6px 0 10px}
 .seg-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border-md);border-radius:var(--r);padding:16px;text-align:center}
 @media(max-width:900px){.seg-grid{grid-template-columns:1fr!important}}
+.pv-nome{font-weight:600;font-size:15px;cursor:pointer;display:inline-block}
+.pv-nome:hover{color:var(--accent);text-decoration:underline}
 .sum-box{background:#eef6f1;border:1px solid #cfe5d8;border-radius:10px;padding:10px 12px;margin:6px 0 8px;font-size:13px}
 .sum-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
 .sum-h .btn{text-transform:none;letter-spacing:0;font-weight:500}
@@ -3368,11 +3370,10 @@ function renderPendenciasScreen(){
     }).join('');
     return '<div class="card" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
-      +'<div><div style="font-weight:600;font-size:14px">'+escText(it.nome)+'</div>'
+      +'<div><div class="pv-nome" onclick="openPortfolioItem('+it.id+')" title="Abrir este projeto no Portfólio">'+escText(it.nome)+'</div>'
       +(it.resumo?'<div style="font-size:13px;margin-top:2px;white-space:pre-line">'+escText(it.resumo)+'</div>':'')
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
-      +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" onclick="togglePendResumo('+it.id+')" title="Gerar um resumo em texto deste projeto">📝 Resumo</button>'
-      +'<button class="btn btn-sm" onclick="openPortfolioItem('+it.id+')">Abrir projeto →</button></span></div>'
+      +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" onclick="togglePendResumo('+it.id+')" title="Gerar um resumo em texto deste projeto">📝 Resumo</button></span></div>'
       +resumoBoxHTML(it)
       +rows
       +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="pv-texto-'+it.id+'" placeholder="Nova pendência..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPendView('+it.id+');}">'
