@@ -90,13 +90,6 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .seg-col-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:6px 0 10px}
 .seg-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border-md);border-radius:var(--r);padding:16px;text-align:center}
 @media(max-width:900px){.seg-grid{grid-template-columns:1fr!important}}
-.ia-box{background:#eef6f1;border:1px solid #cfe5d8;border-radius:10px;padding:10px 12px;margin:6px 0 8px;font-size:13px}
-.ia-h{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
-.ia-h .btn{margin-left:auto}
-.ia-t{margin-top:6px;white-space:pre-line;line-height:1.5}
-.ia-e{margin-top:6px;color:var(--danger);font-size:12px}
-.ia-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2)}
-.ia-bar input{max-width:340px}
 .doc-link{text-decoration:none;cursor:pointer}
 .doc-link:hover{text-decoration:underline}
 .doc-link.ed{text-decoration:none;cursor:text}
@@ -371,7 +364,6 @@ textarea{resize:vertical;min-height:60px}
       <div class="topbar">
         <div><h2 style="font-size:22px">✅ Pendências por projeto</h2><div class="topbar-sub">Todas as pendências do Portfólio TOTVS reunidas, agrupadas por projeto</div></div>
       </div>
-      <div id="pend-ia-bar"></div>
       <div id="pend-kpis" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
       <div id="pend-filtros" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
       <div id="pend-view-list"></div>
@@ -1483,7 +1475,7 @@ function loadPortfolioData(){
     return d;
   } catch(e){ return {itens:[],nextId:1}; }
 }
-function savePortfolioData(){ localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(portfolioData)); aiSchedule(); }
+function savePortfolioData(){ localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(portfolioData)); }
 function showPortfolioTotvs(){
   centralHideScreens();
   document.getElementById('portfolio-screen').classList.add('active');
@@ -3261,117 +3253,8 @@ function renderPortfolioScreen(){
   el.innerHTML=html;
   document.querySelectorAll('#portfolio-list .obs-area').forEach(autoGrow);
 }
-/* ── Resumo inteligente (Claude) por projeto ──
-   Chamada direta do navegador para a API da Anthropic, com a chave que a própria usuária cola (fica só neste navegador). */
-var AI_KEY_LS='pt_ai_key', AI_MODEL='claude-haiku-4-5-20251001';
-var aiTimer=null, aiBusy=false, aiBusyId=null, aiErro={}, aiFalhou={};
-function aiKey(){ try{ return localStorage.getItem(AI_KEY_LS)||''; }catch(e){ return ''; } }
-function aiHash(it){
-  var base=JSON.stringify([it.nome,it.resumo||'',(it.atencao||[]).map(function(a){return [a.texto,!!a.done];}),(it.pendencias||[]).map(function(p){return [p.texto,!!p.done];}),it.obsTexto||'']);
-  var h=5381; for(var i=0;i<base.length;i++){ h=((h<<5)+h+base.charCodeAt(i))|0; } return String(h);
-}
-function aiTemConteudo(it){ return (it.pendencias||[]).length||(it.atencao||[]).length; }
-function aiPrompt(it){
-  var ab=(it.pendencias||[]).filter(function(p){return !p.done;}).slice().sort(function(a,b){return (a.data||'').localeCompare(b.data||'');});
-  var ok=(it.pendencias||[]).filter(function(p){return p.done;}).slice(0,8);
-  var t='Resuma em 3 a 5 linhas curtas, em tom direto de gestora de PMO, em que pé está o projeto abaixo: situação atual, o que está pendente (o mais crítico primeiro) e os riscos/pontos de atenção. '
-    +'Use só o que está nos dados, sem inventar nada. Sem títulos, sem markdown, sem listas com símbolos; frases corridas, uma por linha.\n\n';
-  t+='PROJETO: '+it.nome+'\n';
-  if(it.resumo) t+='DO QUE SE TRATA: '+it.resumo+'\n';
-  var at=(it.atencao||[]).filter(function(a){return !a.done;}).map(function(a){return '- '+a.texto;}).join('\n');
-  if(at) t+='\nPONTOS DE ATENÇÃO:\n'+at.slice(0,2500)+'\n';
-  if(ab.length) t+='\nPENDÊNCIAS EM ABERTO (mais antigas primeiro):\n'+ab.map(function(p){return '- '+p.texto+(p.data?' (desde '+fmtDate(p.data)+')':'');}).join('\n')+'\n';
-  if(ok.length) t+='\nPENDÊNCIAS JÁ CONCLUÍDAS:\n'+ok.map(function(p){return '- '+p.texto;}).join('\n')+'\n';
-  if(it.obsTexto) t+='\nOBSERVAÇÕES:\n'+it.obsTexto.slice(0,1500)+'\n';
-  return t;
-}
-function aiSchedule(){ if(!aiKey()) return; clearTimeout(aiTimer); aiTimer=setTimeout(aiRun,5000); }
-async function aiRun(){
-  if(!aiKey()) return;
-  if(aiBusy){ aiSchedule(); return; }
-  aiBusy=true;
-  try{
-    var itens=(portfolioData.itens||[]).slice();
-    for(var i=0;i<itens.length;i++){
-      var it=itens[i]; if(!aiTemConteudo(it)) continue;
-      var h=aiHash(it);
-      if(it.ia&&it.ia.hash===h) continue;
-      if(aiFalhou[it.id]===h) continue; // já falhou com estes dados: só tenta de novo quando algo mudar
-      await aiGerar(it,h);
-    }
-  } finally { aiBusy=false; }
-}
-async function aiGerar(it,h){
-  var key=aiKey(); if(!key) return;
-  h=h||aiHash(it);
-  aiBusyId=it.id; aiErro[it.id]=null; renderPendenciasScreen();
-  try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:AI_MODEL,max_tokens:400,messages:[{role:'user',content:aiPrompt(it)}]})
-    });
-    if(!r.ok){
-      aiFalhou[it.id]=h;
-      var det=''; try{ var ej=await r.json(); det=(ej&&ej.error&&ej.error.message)||''; }catch(e){}
-      var base=(r.status===401)?'A Anthropic não reconheceu essa chave (apagada, copiada pela metade ou de outro tipo). Gere uma nova em console.anthropic.com e cole de novo.'
-        :(r.status===403)?'Essa chave não tem permissão para usar este modelo.'
-        :(r.status===429)?'Limite de uso da chave atingido. Tente mais tarde.'
-        :(r.status===400&&/credit/i.test(det))?'A conta da API está sem créditos. Adicione saldo em console.anthropic.com → Plans & Billing.'
-        :('A IA não respondeu (erro '+r.status+').');
-      aiErro[it.id]=base+(det?' ['+det+']':'');
-    } else {
-      var j=await r.json();
-      var txt=((j.content||[]).map(function(c){return c.text||'';}).join('')).trim();
-      if(!txt) throw new Error('vazio');
-      it.ia={texto:txt,hash:h,em:new Date().toISOString()};
-      delete aiFalhou[it.id];
-      savePortfolioData();
-    }
-  }catch(e){
-    aiFalhou[it.id]=h;
-    aiErro[it.id]='Não consegui falar com a IA (sem conexão ou bloqueado pelo navegador).';
-  }
-  aiBusyId=null; renderPendenciasScreen();
-}
-function aiGerarUm(id){
-  var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(!it) return;
-  if(!aiKey()){ toast('Cole a chave da IA primeiro'); return; }
-  delete aiFalhou[id]; aiGerar(it,aiHash(it));
-}
-function aiSalvarChave(){
-  var v=(document.getElementById('ia-key-input').value||'').replace(/\s+/g,'');
-  if(!/^sk-ant-/.test(v)){ toast('Essa não parece uma chave da Anthropic (começa com sk-ant-)'); return; }
-  try{ localStorage.setItem(AI_KEY_LS,v); }catch(e){ toast('Não consegui guardar a chave neste navegador'); return; }
-  aiFalhou={}; toast('Chave guardada — gerando os resumos'); renderPendenciasScreen(); aiRun();
-}
-function aiRemoverChave(){
-  if(!confirm('Remover a chave da IA deste navegador? Os resumos já gerados continuam visíveis.')) return;
-  try{ localStorage.removeItem(AI_KEY_LS); }catch(e){}
-  renderPendenciasScreen(); toast('Chave removida');
-}
-function aiAtualizarTodos(){ aiFalhou={}; (portfolioData.itens||[]).forEach(function(it){ if(it.ia) it.ia.hash=''; }); aiRun(); }
-function renderIaBar(){
-  var el=document.getElementById('pend-ia-bar'); if(!el) return;
-  if(aiKey()){
-    el.innerHTML='<div class="ia-bar">🤖 <b>Resumo inteligente ligado.</b> Cada mudança nas pendências, pontos de atenção ou observações refaz o resumo do projeto sozinho. '
-      +'<a style="cursor:pointer;text-decoration:underline" onclick="aiAtualizarTodos()">Atualizar todos agora</a> · '
-      +'<a style="cursor:pointer;text-decoration:underline" onclick="aiRemoverChave()">Remover chave</a></div>';
-  } else {
-    el.innerHTML='<div class="ia-bar">🤖 <b>Resumo inteligente (opcional).</b> Para a IA resumir em que pé está cada projeto, cole aqui uma chave de API da Anthropic. Ela fica guardada só neste navegador. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--accent)">Onde pego a chave? ↗</a> (Create Key → copie na hora, ela aparece uma vez só; é preciso ter saldo em Plans &amp; Billing.) '
-      +'<div style="display:flex;gap:6px;margin-top:8px"><input type="password" id="ia-key-input" placeholder="sk-ant-..." autocomplete="off" onkeydown="if(event.key===\'Enter\'){event.preventDefault();aiSalvarChave();}">'
-      +'<button class="btn btn-sm" onclick="aiSalvarChave()">Ativar</button></div></div>';
-  }
-}
-function aiBoxHTML(it){
-  var ia=it.ia, err=aiErro[it.id], busy=(aiBusyId===it.id);
-  if(!aiKey()&&!ia) return '';
-  var quando=ia&&ia.em?(function(d){ return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); })(new Date(ia.em)):'';
-  return '<div class="ia-box"><div class="ia-h">🤖 Em que pé está · '+(busy?'atualizando…':(ia?'atualizado em '+quando:'ainda não gerado'))
-    +(aiKey()?'<button class="btn btn-sm" onclick="aiGerarUm('+it.id+')" title="Refazer o resumo agora">↻</button>':'')+'</div>'
-    +(ia?'<div class="ia-t">'+escText(ia.texto)+'</div>':'')
-    +(err?'<div class="ia-e">'+escText(err)+'</div>':'')+'</div>';
-}
+// (recurso de resumo por IA removido) apaga qualquer chave que tenha ficado guardada neste navegador
+try{ localStorage.removeItem('pt_ai_key'); }catch(e){}
 /* ── Pendências por projeto (visão consolidada) ── */
 var pendFiltro='abertas';
 function setPendFiltro(f){ pendFiltro=f; renderPendenciasScreen(); }
@@ -3387,7 +3270,6 @@ function addPendView(itemId){
 }
 function renderPendenciasScreen(){
   var list=document.getElementById('pend-view-list'); if(!list) return;
-  renderIaBar();
   var itens=portfolioData.itens||[];
   var totAb=0,totOk=0,projAb=0;
   itens.forEach(function(it){
@@ -3430,7 +3312,6 @@ function renderPendenciasScreen(){
       +(it.resumo?'<div style="font-size:13px;margin-top:2px;white-space:pre-line">'+escText(it.resumo)+'</div>':'')
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
       +'<button class="btn btn-sm" onclick="openPortfolioItem('+it.id+')">Abrir projeto →</button></div>'
-      +aiBoxHTML(it)
       +rows
       +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="pv-texto-'+it.id+'" placeholder="Nova pendência..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPendView('+it.id+');}">'
       +'<button class="btn btn-sm" onclick="addPendView('+it.id+')">+ Pendência</button></div>'
