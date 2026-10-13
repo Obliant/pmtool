@@ -3210,7 +3210,7 @@ function renderPortfolioScreen(){
     var resumo=nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s');
     return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togglePortItem('+it.id+')">'
-      +'<div><div class="port-name" style="font-weight:600;font-size:14px">'+escText(it.nome)+'</div>'
+      +'<div><div class="port-name" style="font-weight:600;font-size:15px" onclick="event.stopPropagation()" title="Clique para editar o nome">'+edSpan(da(it,'nome'),it.nome,false,'Nome do projeto','ed-b')+'</div>'
       +'<div style="font-size:13px;margin-top:3px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',true,'+ do que se trata (ex: RM + Ahgora) — Enter cria nova linha')+'</div>'
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+resumo+'</div></div>'
       +'<div style="display:flex;align-items:center;gap:4px">'
@@ -3383,7 +3383,6 @@ function savePortField(el){
   var mudou=(r.obj[r.key]!==v);
   if(mudou){ r.obj[r.key]=v; savePortfolioData(); toast('Salvo'); }
   if(r.key==='valor') el.textContent=v?fmtBRL(v):'';
-  if(el.dataset.f==='nome'){ var h=document.querySelector('#portcard-'+r.it.id+' .port-name'); if(h) h.textContent=v; }
   if(r.key==='url'){ el.textContent=v; if(el.tagName==='A'){ el.href=v||'#'; el.classList.remove('ed'); el.removeAttribute('contenteditable'); } }
 }
 function delBtn(fn,a,b){
@@ -3494,8 +3493,6 @@ function portItemDetailHTML(it){
       }).join('')+'</tbody></table></div>'
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>';
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
-    +'<div class="card-title" style="margin-bottom:4px;font-size:12px">🏷️ Nome</div>'
-    +'<div style="font-size:14px;font-weight:600;margin-bottom:14px">'+edSpan(da(it,'nome'),it.nome,false,'Nome do projeto')+'</div>'
     +'<div class="psec-all"><a onclick="setAllPortSec(true)">Recolher tudo</a> · <a onclick="setAllPortSec(false)">Expandir tudo</a></div>'
     +psec('objetivo','🎯 Objetivo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>')
     +psec('escopo','📋 Escopo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'escopo'),it.escopo,true,'Clique para escrever o escopo')+'</div>')
