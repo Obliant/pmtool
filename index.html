@@ -90,6 +90,10 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .seg-col-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:6px 0 10px}
 .seg-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border-md);border-radius:var(--r);padding:16px;text-align:center}
 @media(max-width:900px){.seg-grid{grid-template-columns:1fr!important}}
+.sum-box{background:#eef6f1;border:1px solid #cfe5d8;border-radius:10px;padding:10px 12px;margin:6px 0 8px;font-size:13px}
+.sum-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
+.sum-h .btn{text-transform:none;letter-spacing:0;font-weight:500}
+.sum-t{margin-top:8px;white-space:pre-line;line-height:1.55}
 .doc-link{text-decoration:none;cursor:pointer}
 .doc-link:hover{text-decoration:underline}
 .doc-link.ed{text-decoration:none;cursor:text}
@@ -3255,6 +3259,62 @@ function renderPortfolioScreen(){
 }
 // (recurso de resumo por IA removido) apaga qualquer chave que tenha ficado guardada neste navegador
 try{ localStorage.removeItem('pt_ai_key'); }catch(e){}
+/* ── Resumo em texto do projeto (montado na hora com o que está cadastrado; sem IA externa) ── */
+var pendResumoAberto={};
+function cortaTxt(t,n){ t=(t||'').replace(/\s+/g,' ').trim(); return t.length>n?t.slice(0,n-1)+'…':t; }
+function resumoDados(it){
+  var pend=it.pendencias||[], ab=pend.filter(function(p){return !p.done;}), ok=pend.filter(function(p){return p.done;});
+  var at=(it.atencao||[]).filter(function(a){return !a.done;}), atOk=(it.atencao||[]).filter(function(a){return a.done;});
+  return {ab:ab,ok:ok,at:at,atOk:atOk,total:pend.length};
+}
+function resumoTexto(it){
+  var d=resumoDados(it), L=[];
+  L.push(it.nome+(it.resumo?' — '+it.resumo.replace(/\s*\n\s*/g,' · '):''));
+  var pct=d.total?Math.round(d.ok.length*100/d.total):null;
+  L.push('Situação: '+d.ab.length+' pendência'+(d.ab.length===1?'':'s')+' em aberto'+(d.ok.length?' e '+d.ok.length+' concluída'+(d.ok.length===1?'':'s'):'')+(pct!==null?' ('+pct+'% do checklist feito)':'')+'.');
+  if(d.ab.length){
+    L.push('Em aberto (na ordem da sua lista):');
+    d.ab.slice(0,8).forEach(function(p,i){ L.push((i+1)+'. '+cortaTxt(p.texto,140)+(p.data?' (desde '+fmtDate(p.data)+')':'')); });
+    if(d.ab.length>8) L.push('… e mais '+(d.ab.length-8)+'.');
+  } else if(d.total){ L.push('Nenhuma pendência em aberto.'); }
+  if(d.at.length){
+    L.push('Pontos de atenção ativos ('+d.at.length+'):');
+    d.at.slice(0,5).forEach(function(a){ L.push('• '+cortaTxt(a.texto,180)); });
+    if(d.at.length>5) L.push('… e mais '+(d.at.length-5)+'.');
+  }
+  if(d.atOk.length) L.push(d.atOk.length+' ponto'+(d.atOk.length===1?'':'s')+' de atenção já resolvido'+(d.atOk.length===1?'':'s')+'.');
+  if(d.ok.length){
+    L.push('Últimas concluídas:');
+    d.ok.slice(0,3).forEach(function(p){ L.push('✓ '+cortaTxt(p.texto,120)); });
+  }
+  return L.join('\n');
+}
+function resumoPrompt(it){
+  var d=resumoDados(it);
+  var t='Resuma em 3 a 5 linhas curtas, em tom direto de gestora de PMO, em que pé está o projeto abaixo: situação atual, o que está pendente (o mais crítico primeiro) e riscos/pontos de atenção. Use só o que está nos dados, sem inventar nada; frases corridas, sem títulos nem markdown.\n\n';
+  t+='PROJETO: '+it.nome+'\n'+(it.resumo?'DO QUE SE TRATA: '+it.resumo+'\n':'');
+  if(d.at.length) t+='\nPONTOS DE ATENÇÃO:\n'+d.at.map(function(a){return '- '+a.texto;}).join('\n').slice(0,2500)+'\n';
+  if(d.ab.length) t+='\nPENDÊNCIAS EM ABERTO:\n'+d.ab.map(function(p){return '- '+p.texto+(p.data?' (desde '+fmtDate(p.data)+')':'');}).join('\n')+'\n';
+  if(d.ok.length) t+='\nPENDÊNCIAS CONCLUÍDAS:\n'+d.ok.slice(0,8).map(function(p){return '- '+p.texto;}).join('\n')+'\n';
+  if(it.obsTexto) t+='\nOBSERVAÇÕES:\n'+it.obsTexto.slice(0,1500)+'\n';
+  return t;
+}
+function copiarTexto(t,msg){
+  function fallback(){ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast(msg); }catch(e){ toast('Não consegui copiar — selecione o texto e use Ctrl+C'); } document.body.removeChild(ta); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){ toast(msg); },fallback); } else fallback();
+}
+function togglePendResumo(id){ pendResumoAberto[id]=!pendResumoAberto[id]; renderPendenciasScreen(); }
+function copiarResumo(id){ var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(it) copiarTexto(resumoTexto(it),'Resumo copiado'); }
+function copiarPromptClaude(id){ var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(it) copiarTexto(resumoPrompt(it),'Copiado — cole numa conversa com o Claude'); }
+function resumoBoxHTML(it){
+  if(!pendResumoAberto[it.id]) return '';
+  return '<div class="sum-box"><div class="sum-h">📝 Resumo (atualiza sozinho a cada mudança)'
+    +'<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button class="btn btn-sm" onclick="copiarResumo('+it.id+')">📋 Copiar</button>'
+    +'<button class="btn btn-sm" onclick="copiarPromptClaude('+it.id+')" title="Copia os dados com o pedido pronto; cole numa conversa com o Claude para um resumo redigido">🤖 Copiar p/ Claude</button>'
+    +'<button class="btn btn-sm" onclick="togglePendResumo('+it.id+')">✕</button></span></div>'
+    +'<div class="sum-t">'+escText(resumoTexto(it))+'</div></div>';
+}
 /* ── Pendências por projeto (visão consolidada) ── */
 var pendFiltro='abertas';
 function setPendFiltro(f){ pendFiltro=f; renderPendenciasScreen(); }
@@ -3311,7 +3371,9 @@ function renderPendenciasScreen(){
       +'<div><div style="font-weight:600;font-size:14px">'+escText(it.nome)+'</div>'
       +(it.resumo?'<div style="font-size:13px;margin-top:2px;white-space:pre-line">'+escText(it.resumo)+'</div>':'')
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
-      +'<button class="btn btn-sm" onclick="openPortfolioItem('+it.id+')">Abrir projeto →</button></div>'
+      +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" onclick="togglePendResumo('+it.id+')" title="Gerar um resumo em texto deste projeto">📝 Resumo</button>'
+      +'<button class="btn btn-sm" onclick="openPortfolioItem('+it.id+')">Abrir projeto →</button></span></div>'
+      +resumoBoxHTML(it)
       +rows
       +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="pv-texto-'+it.id+'" placeholder="Nova pendência..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPendView('+it.id+');}">'
       +'<button class="btn btn-sm" onclick="addPendView('+it.id+')">+ Pendência</button></div>'
