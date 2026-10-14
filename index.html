@@ -1332,7 +1332,7 @@ function showEmbed(key){
   centralHideScreens();
   var fr=document.getElementById('embedFrame');
   if(!fr.getAttribute('src')){
-    fr.src=DEMANDAS_URL+'?embed=1#'+key;
+    fr.src=DEMANDAS_URL+'?embed=1&v='+Date.now()+'#'+key; // v=: sempre busca a versão mais nova (evita ficar preso no cache)
   } else if(fr.contentWindow){
     fr.contentWindow.postMessage({centralGo:key},'*');
   }
