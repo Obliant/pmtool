@@ -3365,9 +3365,10 @@ function renderPendenciasScreen(){
       +urg.map(function(u){
         return '<div class="urg-item">'
           +'<input type="checkbox" onchange="togglePortPendencia('+u.it.id+','+u.p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer" title="Marcar como feita">'
-          +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+escText(u.p.texto)+'</div>'
-          +'<div style="font-size:12px;color:var(--text2)"><a href="#" class="urg-proj" onclick="openPortfolioItem('+u.it.id+');return false" style="color:var(--accent);font-weight:600;text-decoration:none">'+escText(u.it.nome)+'</a>'
-          +(segInfo(u.it.segmento)?' · '+segInfo(u.it.segmento).label:'')+(u.p.data?' · desde '+fmtDate(u.p.data):'')+'</div></div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:12px;color:var(--text2)"><a href="#" class="urg-proj" onclick="openPortfolioItem('+u.it.id+');return false" style="color:var(--accent);font-weight:700;font-size:13px;text-decoration:none">'+escText(u.it.nome)+'</a>'
+          +(segInfo(u.it.segmento)?' · '+segInfo(u.it.segmento).label:'')+(u.p.data?' · desde '+fmtDate(u.p.data):'')+'</div>'
+          +'<div style="font-weight:600;margin-top:2px">'+escText(u.p.texto)+'</div></div>'
           +'<button class="urg-btn on" onclick="togglePortUrgente('+u.it.id+','+u.p.id+')" title="Tirar o destaque de urgente">⚑</button>'
           +'</div>';
       }).join('')+'</div>'
