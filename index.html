@@ -90,6 +90,15 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .seg-col-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:6px 0 10px}
 .seg-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border-md);border-radius:var(--r);padding:16px;text-align:center}
 @media(max-width:900px){.seg-grid{grid-template-columns:1fr!important}}
+.pend-urg{background:#fff1f1;border-left:3px solid var(--danger);padding-left:8px!important;border-radius:6px}
+.pend-urg .ed{font-weight:600}
+.urg-btn{border:none;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:6px;color:var(--text3);opacity:.55}
+.urg-btn:hover{opacity:1;background:#fee2e2;color:var(--danger)}
+.urg-btn.on{opacity:1;color:var(--danger)}
+.urg-box{background:#fff5f5;border:1px solid #f5c2c2;border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.urg-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--danger);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.urg-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #f5c2c2;font-size:13px}
+.urg-item:first-of-type{border-top:none}
 .pv-nome{font-weight:600;font-size:15px;cursor:pointer;display:inline-block}
 .pv-nome:hover{color:var(--accent);text-decoration:underline}
 .sum-box{background:#eef6f1;border:1px solid #cfe5d8;border-radius:10px;padding:10px 12px;margin:6px 0 8px;font-size:13px}
@@ -370,6 +379,7 @@ textarea{resize:vertical;min-height:60px}
       <div class="topbar">
         <div><h2 style="font-size:22px">✅ Pendências por projeto</h2><div class="topbar-sub">Todas as pendências do Portfólio TOTVS reunidas, agrupadas por projeto</div></div>
       </div>
+      <div id="pend-urgentes"></div>
       <div id="pend-kpis" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
       <div id="pend-filtros" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
       <div id="pend-view-list"></div>
@@ -3186,6 +3196,15 @@ function movePortPendencia(itemId,pendId,targetId,after){
   document.addEventListener('dragend',function(){ drag=null; limpa(); soltaDraggable(); });
   document.addEventListener('mouseup',soltaDraggable);
 })();
+function urgBtn(itemId,p){
+  return '<button class="urg-btn'+(p.urgente?' on':'')+'" onclick="togglePortUrgente('+itemId+','+p.id+')" title="'+(p.urgente?'Urgente — clique para tirar o destaque':'Marcar como urgente')+'">⚑</button>';
+}
+function togglePortUrgente(itemId,pendId){
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
+  p.urgente=!p.urgente;
+  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
+}
 function togglePortPendencia(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
@@ -3277,7 +3296,7 @@ function resumoTexto(it){
   L.push('Situação: '+d.ab.length+' pendência'+(d.ab.length===1?'':'s')+' em aberto'+(d.ok.length?' e '+d.ok.length+' concluída'+(d.ok.length===1?'':'s'):'')+(pct!==null?' ('+pct+'% do checklist feito)':'')+'.');
   if(d.ab.length){
     L.push('Em aberto (na ordem da sua lista):');
-    d.ab.slice(0,8).forEach(function(p,i){ L.push((i+1)+'. '+cortaTxt(p.texto,140)+(p.data?' (desde '+fmtDate(p.data)+')':'')); });
+    d.ab.slice(0,8).forEach(function(p,i){ L.push((i+1)+'. '+(p.urgente?'[URGENTE] ':'')+cortaTxt(p.texto,140)+(p.data?' (desde '+fmtDate(p.data)+')':'')); });
     if(d.ab.length>8) L.push('… e mais '+(d.ab.length-8)+'.');
   } else if(d.total){ L.push('Nenhuma pendência em aberto.'); }
   if(d.at.length){
@@ -3339,8 +3358,23 @@ function renderPendenciasScreen(){
     var ab=(it.pendencias||[]).filter(function(p){return !p.done;}).length;
     totAb+=ab; totOk+=(it.pendencias||[]).length-ab; if(ab) projAb++;
   });
+  var urg=[];
+  itens.forEach(function(it){ (it.pendencias||[]).forEach(function(p){ if(p.urgente&&!p.done) urg.push({it:it,p:p}); }); });
+  document.getElementById('pend-urgentes').innerHTML=urg.length
+    ? '<div class="urg-box"><div class="urg-h">⚑ Urgentes <span class="psec-n" style="background:#fee2e2;color:var(--danger)">'+urg.length+'</span></div>'
+      +urg.map(function(u){
+        return '<div class="urg-item">'
+          +'<input type="checkbox" onchange="togglePortPendencia('+u.it.id+','+u.p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer" title="Marcar como feita">'
+          +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+escText(u.p.texto)+'</div>'
+          +'<div style="font-size:12px;color:var(--text2)"><a href="#" class="urg-proj" onclick="openPortfolioItem('+u.it.id+');return false" style="color:var(--accent);font-weight:600;text-decoration:none">'+escText(u.it.nome)+'</a>'
+          +(segInfo(u.it.segmento)?' · '+segInfo(u.it.segmento).label:'')+(u.p.data?' · desde '+fmtDate(u.p.data):'')+'</div></div>'
+          +'<button class="urg-btn on" onclick="togglePortUrgente('+u.it.id+','+u.p.id+')" title="Tirar o destaque de urgente">⚑</button>'
+          +'</div>';
+      }).join('')+'</div>'
+    : '';
   document.getElementById('pend-kpis').innerHTML=
      '<div class="pv-kpi"><b style="color:#b45309">'+totAb+'</b><span>pendências abertas</span></div>'
+    +(urg.length?'<div class="pv-kpi" style="border-color:#f5c2c2"><b style="color:var(--danger)">'+urg.length+'</b><span>urgentes</span></div>':'')
     +'<div class="pv-kpi"><b>'+projAb+'</b><span>projetos com pendência aberta</span></div>'
     +'<div class="pv-kpi"><b style="color:#2d6a4f">'+totOk+'</b><span>concluídas</span></div>';
   document.getElementById('pend-filtros').innerHTML=[['abertas','Abertas'],['todas','Todas'],['concluidas','Concluídas']].map(function(o){
@@ -3361,11 +3395,11 @@ function renderPendenciasScreen(){
   var cardHtml=function(c){
     var it=c.it;
     var rows=c.show.map(function(p){
-      return '<div class="pend-row" data-it="'+it.id+'" data-pend="'+p.id+'" data-open="'+(p.done?'0':'1')+'" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
+      return '<div class="pend-row'+(p.urgente&&!p.done?' pend-urg':'')+'" data-it="'+it.id+'" data-pend="'+p.id+'" data-open="'+(p.done?'0':'1')+'" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
           +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
         +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
         +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
-        +'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
+        +(p.done?'':urgBtn(it.id,p))+'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
         +delBtn('deletePortPendencia',it.id,p.id)
         +'</div>';
     }).join('');
@@ -3571,11 +3605,11 @@ function portItemDetailHTML(it){
   var pendOrdenadas=pendList.filter(function(p){return !p.done;}).concat(pendList.filter(function(p){return p.done;}));
   var pendHTML=(pendOrdenadas.length
     ? pendOrdenadas.map(function(p){
-        return '<div class="pend-row" data-it="'+it.id+'" data-pend="'+p.id+'" data-open="'+(p.done?'0':'1')+'" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
+        return '<div class="pend-row'+(p.urgente&&!p.done?' pend-urg':'')+'" data-it="'+it.id+'" data-pend="'+p.id+'" data-open="'+(p.done?'0':'1')+'" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px">'
           +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
           +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
           +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
-          +'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
+          +(p.done?'':urgBtn(it.id,p))+'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
           +delBtn('deletePortPendencia',it.id,p.id)
           +'</div>';
       }).join('')
