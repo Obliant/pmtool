@@ -3346,16 +3346,6 @@ function resumoBoxHTML(it){
 /* ── Pendências por projeto (visão consolidada) ── */
 var pendFiltro='abertas';
 function setPendFiltro(f){ pendFiltro=f; renderPendenciasScreen(); }
-function addPendView(itemId){
-  var input=document.getElementById('pv-texto-'+itemId);
-  var texto=input.value.trim();
-  if(!texto){ toast('Escreva a pendência'); return; }
-  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
-  if(!it.pendencias) it.pendencias=[];
-  it.pendencias.unshift({id:portfolioData.nextId++,texto:texto,done:false,data:today()});
-  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); toast('Pendência adicionada');
-  var again=document.getElementById('pv-texto-'+itemId); if(again) again.focus();
-}
 function renderPendenciasScreen(){
   var list=document.getElementById('pend-view-list'); if(!list) return;
   var itens=portfolioData.itens||[];
@@ -3428,8 +3418,6 @@ function renderPendenciasScreen(){
       +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" onclick="togglePendResumo('+it.id+')" title="Gerar um resumo em texto deste projeto">📝 Resumo</button></span></div>'
       +resumoBoxHTML(it)
       +rows
-      +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="pv-texto-'+it.id+'" placeholder="Nova pendência..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPendView('+it.id+');}">'
-      +'<button class="btn btn-sm" onclick="addPendView('+it.id+')">+ Pendência</button></div>'
       +'</div>';
   };
   // dois blocos, igual ao Portfólio: SMB à esquerda, Large à direita; sem carteira numa faixa no topo
