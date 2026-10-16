@@ -111,6 +111,14 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .sum-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
 .sum-h .btn{text-transform:none;letter-spacing:0;font-weight:500}
 .sum-t{margin-top:8px;white-space:pre-line;line-height:1.55}
+/* Aba Pendências = visão de reunião: edição discreta, aparece ao passar o mouse na linha */
+#pend-view-list .pend-row .pend-drag,#pend-view-list .pend-row .btn-danger,#pend-view-list .pend-row .urg-btn:not(.on){opacity:0;transition:opacity .12s}
+#pend-view-list .pend-row:hover .pend-drag,#pend-view-list .pend-row:hover .btn-danger,#pend-view-list .pend-row:hover .urg-btn{opacity:1}
+#pend-view-list .pend-row.pend-urg{background:transparent;border-left:none;padding-left:0!important}
+#pend-view-list .pend-row.pend-urg .ed{font-weight:500}
+.pv-linha{font-size:12.5px;color:var(--text2);margin-bottom:14px}
+.pv-linha b{color:var(--text)}
+.sum-curto .sum-t{margin-top:6px}
 .doc-link{text-decoration:none;cursor:pointer}
 .doc-link:hover{text-decoration:underline}
 .doc-link.ed{text-decoration:none;cursor:text}
@@ -386,7 +394,7 @@ textarea{resize:vertical;min-height:60px}
         <div><h2 style="font-size:22px">✅ Pendências por projeto</h2><div class="topbar-sub">Todas as pendências do Portfólio TOTVS reunidas, agrupadas por projeto</div></div>
       </div>
       <div id="pend-urgentes"></div>
-      <div id="pend-kpis" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="pend-kpis"></div>
       <div id="pend-filtros" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
       <div id="pend-view-list"></div>
     </div>
@@ -3331,17 +3339,26 @@ function copiarTexto(t,msg){
   function fallback(){ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast(msg); }catch(e){ toast('Não consegui copiar — selecione o texto e use Ctrl+C'); } document.body.removeChild(ta); }
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){ toast(msg); },fallback); } else fallback();
 }
-function togglePendResumo(id){ pendResumoAberto[id]=!pendResumoAberto[id]; renderPendenciasScreen(); }
+function togglePendResumo(id){ pendResumoAberto[id]=(pendResumoAberto[id]===false); renderPendenciasScreen(); }
 function copiarResumo(id){ var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(it) copiarTexto(resumoTexto(it),'Resumo copiado'); }
 function copiarPromptClaude(id){ var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(it) copiarTexto(resumoPrompt(it),'Copiado — cole numa conversa com o Claude'); }
+function resumoCurto(it){
+  var d=resumoDados(it), L=[];
+  var pct=d.total?Math.round(d.ok.length*100/d.total):null;
+  L.push(d.ab.length+' pendência'+(d.ab.length===1?'':'s')+' em aberto'+(d.ab.filter(function(p){return p.urgente;}).length?' ('+d.ab.filter(function(p){return p.urgente;}).length+' urgente'+(d.ab.filter(function(p){return p.urgente;}).length===1?'':'s')+')':'')
+    +(d.ok.length?' · '+d.ok.length+' concluída'+(d.ok.length===1?'':'s'):'')+(pct!==null?' · '+pct+'% feito':'')+'.');
+  d.at.slice(0,3).forEach(function(a){ L.push('Atenção: '+cortaTxt(a.texto,170)); });
+  if(d.at.length>3) L.push('… e mais '+(d.at.length-3)+' ponto'+(d.at.length-3>1?'s':'')+' de atenção.');
+  return L.join('\n');
+}
 function resumoBoxHTML(it){
-  if(!pendResumoAberto[it.id]) return '';
-  return '<div class="sum-box"><div class="sum-h">📝 Resumo (atualiza sozinho a cada mudança)'
+  if(pendResumoAberto[it.id]===false) return '';
+  return '<div class="sum-box sum-curto"><div class="sum-h">📝 Resumo'
     +'<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'
     +'<button class="btn btn-sm" onclick="copiarResumo('+it.id+')">📋 Copiar</button>'
     +'<button class="btn btn-sm" onclick="copiarPromptClaude('+it.id+')" title="Copia os dados com o pedido pronto; cole numa conversa com o Claude para um resumo redigido">🤖 Copiar p/ Claude</button>'
     +'<button class="btn btn-sm" onclick="togglePendResumo('+it.id+')">✕</button></span></div>'
-    +'<div class="sum-t">'+escText(resumoTexto(it))+'</div></div>';
+    +'<div class="sum-t">'+escText(resumoCurto(it))+'</div></div>';
 }
 /* ── Pendências por projeto (visão consolidada) ── */
 var pendFiltro='abertas';
@@ -3379,11 +3396,9 @@ function renderPendenciasScreen(){
           +'</div>';
       }).join('')+'</div>'
     : '';
-  document.getElementById('pend-kpis').innerHTML=
-     '<div class="pv-kpi"><b style="color:#b45309">'+totAb+'</b><span>pendências abertas</span></div>'
-    +(urg.length?'<div class="pv-kpi" style="border-color:#f5c2c2"><b style="color:var(--danger)">'+urg.length+'</b><span>urgentes</span></div>':'')
-    +'<div class="pv-kpi"><b>'+projAb+'</b><span>projetos com pendência aberta</span></div>'
-    +'<div class="pv-kpi"><b style="color:#2d6a4f">'+totOk+'</b><span>concluídas</span></div>';
+  document.getElementById('pend-kpis').innerHTML='<div class="pv-linha"><b>'+totAb+'</b> pendência'+(totAb===1?'':'s')+' aberta'+(totAb===1?'':'s')
+    +(urg.length?' · <b style="color:var(--danger)">'+urg.length+' urgente'+(urg.length===1?'':'s')+'</b>':'')
+    +' · '+projAb+' projeto'+(projAb===1?'':'s')+' · '+totOk+' concluída'+(totOk===1?'':'s')+'</div>';
   document.getElementById('pend-filtros').innerHTML=[['abertas','Abertas'],['todas','Todas'],['concluidas','Concluídas']].map(function(o){
     return '<span class="pv-chip'+(pendFiltro===o[0]?' active':'')+'" onclick="setPendFiltro(\''+o[0]+'\')">'+o[1]+'</span>';
   }).join('');
