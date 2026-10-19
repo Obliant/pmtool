@@ -1508,6 +1508,15 @@ function loadPortfolioData(){
         d.itens=d.itens.filter(function(x){return x!==fu;});
       }
     }
+    if(d.seedsApplied.indexOf('objetivo-escopo-1campo')<0){
+      d.seedsApplied.push('objetivo-escopo-1campo'); mudou=true;
+      d.itens.forEach(function(it){
+        if(it.escopo&&String(it.escopo).trim()){
+          it.objetivo=[it.objetivo,it.escopo].filter(function(t){return t&&String(t).trim();}).join('\n\n');
+        }
+        it.escopo='';
+      });
+    }
     if(mudou) localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(d));
     return d;
   } catch(e){ return {itens:[],nextId:1}; }
@@ -3286,7 +3295,10 @@ function portCardHTML(it){
         return '<div class="gl-row" onclick="event.stopPropagation()">🚀 <b>Go live</b> '
           +(it.goliveNA?'<span class="gl-na">N/A — ACT (customização)</span>'
             :'<input type="date" value="'+escAttr(it.golive||'')+'" onchange="setGolive('+it.id+',this.value)" title="Previsão de go live">'+(g?'<span class="gl-badge '+g.cls+'">'+g.rel+'</span>':''))
-          +'<label class="gl-chk"><input type="checkbox" '+(it.goliveNA?'checked':'')+' onchange="setGoliveNA('+it.id+',this.checked)"> ACT (não se aplica)</label></div>'; })()
+          +'<label class="gl-chk"><input type="checkbox" '+(it.goliveNA?'checked':'')+' onchange="setGoliveNA('+it.id+',this.checked)"> ACT (não se aplica)</label>'
+          +'<span style="margin-left:14px">📂 <b>Carteira</b></span> '
+          +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
+          +'</div>'; })()
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+resumo+'</div></div>'
       +'<div style="display:flex;align-items:center;gap:4px">'
       +'<button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deletePortItem('+it.id+')" title="Excluir projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
@@ -3582,7 +3594,7 @@ function savePortField(el){
   var mudou=(r.obj[r.key]!==v);
   if(mudou){ r.obj[r.key]=v; savePortfolioData(); toast('Salvo'); }
   if(r.key==='valor') el.textContent=v?fmtBRL(v):'';
-  if(r.key==='segmento'&&mudou){ portExpandedId=r.it.id; renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview(); return; }
+  if(r.key==='segmento'&&mudou){ renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview(); return; }
   if(r.key==='url'){ el.textContent=v; if(el.tagName==='A'){ el.href=v||'#'; el.classList.remove('ed'); el.removeAttribute('contenteditable'); } }
 }
 function delBtn(fn,a,b){
@@ -3603,7 +3615,7 @@ function portContatoFormHTML(it){
     +'<button class="btn btn-primary btn-sm" onclick="saveInlinePortContato('+it.id+')">Adicionar contato</button>'
     +'</div>';
 }
-var PORT_SECS=['objetivo','escopo','atencao','obs','contatos','marcos','docs','pend'];
+var PORT_SECS=['objetivo','atencao','obs','contatos','marcos','docs','pend'];
 var portColl=(function(){ try{ return JSON.parse(localStorage.getItem('pt_port_collapsed'))||{}; }catch(e){ return {}; } })();
 function isPortColl(key){ return portColl[key]===undefined ? key!=='pend' : !!portColl[key]; }
 function savePortColl(){ try{ localStorage.setItem('pt_port_collapsed',JSON.stringify(portColl)); }catch(e){} }
@@ -3695,13 +3707,11 @@ function portItemDetailHTML(it){
       }).join('')+'</tbody></table></div>'
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>';
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px"><span class="card-title" style="margin:0;font-size:12px">📂 Carteira</span>'
-    +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
-    +'<button class="btn btn-sm" style="margin-left:auto" onclick="renomearProjeto('+it.id+')" title="Editar o nome deste projeto">✎ Renomear</button>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px">'
+    +'<button class="btn btn-sm" onclick="renomearProjeto('+it.id+')" title="Editar o nome deste projeto">✎ Renomear</button>'
     +'</div>'
     +'<div class="psec-all"><a onclick="setAllPortSec(true)">Recolher tudo</a> · <a onclick="setAllPortSec(false)">Expandir tudo</a></div>'
-    +psec('objetivo','🎯 Objetivo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo')+'</div>')
-    +psec('escopo','📋 Escopo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'escopo'),it.escopo,true,'Clique para escrever o escopo')+'</div>')
+    +psec('objetivo','🎯 Objetivo e escopo',null,'<div style="font-size:13px;margin-bottom:6px">'+edSpan(da(it,'objetivo'),it.objetivo,true,'Clique para escrever o objetivo e o escopo')+'</div>')
     +psec('atencao','⚠️ Pontos de atenção',(it.atencao||[]).filter(function(a){return !a.done;}).length||null,atenHTML)
     +psec('obs','🗒️ Observações',null,obsHTML)
     +psec('contatos','👤 Contatos',(it.contatos||[]).length||null,contatosHTML+portContatoFormHTML(it))
