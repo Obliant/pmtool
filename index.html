@@ -142,6 +142,8 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .gl-badge{font-size:11px;font-weight:600;border-radius:999px;padding:1px 9px;background:#e3eee8;color:#2d6a4f}
 .gl-badge.perto{background:#fef3c7;color:#b45309}
 .gl-badge.passou{background:#fee2e2;color:var(--danger)}
+.marco-ok .ed-b{text-decoration:line-through;color:var(--text3)}
+.marco-ok td{color:var(--text3)}
 .doc-link{text-decoration:none;cursor:pointer}
 .doc-link:hover{text-decoration:underline}
 .doc-link.ed{text-decoration:none;cursor:text}
@@ -3261,6 +3263,13 @@ function togglePortUrgente(itemId,pendId){
   p.urgente=!p.urgente;
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
 }
+function togglePortMarco(itemId,marcoId){
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var m=(it.marcos||[]).find(function(x){return x.id===marcoId;}); if(!m) return;
+  if(m.status==='ok'){ m.status=m.statusAntes&&m.statusAntes!=='ok'?m.statusAntes:'future'; delete m.statusAntes; }
+  else { m.statusAntes=m.status||'future'; m.status='ok'; }
+  savePortfolioData(); renderPortfolioScreen();
+}
 function togglePortPendencia(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
@@ -3657,6 +3666,7 @@ function savePortField(el){
   var mudou=(r.obj[r.key]!==v);
   if(mudou){ r.obj[r.key]=v; savePortfolioData(); toast('Salvo'); }
   if(r.key==='valor') el.textContent=v?fmtBRL(v):'';
+  if(el.dataset.f==='marco.status'&&mudou){ renderPortfolioScreen(); return; }
   if(r.key==='segmento'&&mudou){ renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview(); return; }
   if(r.key==='url'){ el.textContent=v; if(el.tagName==='A'){ el.href=v||'#'; el.classList.remove('ed'); el.removeAttribute('contenteditable'); } }
 }
@@ -3759,9 +3769,10 @@ function portItemDetailHTML(it){
     +'<button class="btn btn-sm" onclick="addPortDoc('+it.id+')">+ Documento</button></div>';
   var marcos=it.marcos||[];
   var marcosHTML=marcos.length
-    ? '<div style="overflow-x:auto"><table class="tbl" style="margin-top:4px"><thead><tr><th>Marco</th><th>Planejado</th><th>Status</th><th>Valor (R$)</th><th>Financeiro</th><th></th></tr></thead><tbody>'
+    ? '<div style="overflow-x:auto"><table class="tbl" style="margin-top:4px"><thead><tr><th style="width:30px" title="Concluído">✓</th><th>Marco</th><th>Planejado</th><th>Status</th><th>Valor (R$)</th><th>Financeiro</th><th></th></tr></thead><tbody>'
       +marcos.map(function(m){
-        return '<tr><td>'+edSpan(da(it,'marco.nome',m.id),m.nome,false,'Marco','ed-b')+'</td>'
+        return '<tr class="'+(m.status==='ok'?'marco-ok':'')+'"><td><input type="checkbox" '+(m.status==='ok'?'checked':'')+' onchange="togglePortMarco('+it.id+','+m.id+')" title="Marcar o marco como concluído" style="width:16px;height:16px;cursor:pointer"></td>'
+          +'<td>'+edSpan(da(it,'marco.nome',m.id),m.nome,false,'Marco','ed-b')+'</td>'
           +'<td><input type="date" class="inl" '+da(it,'marco.planDate',m.id)+' value="'+escAttr(m.planDate||'')+'" onchange="savePortField(this)"></td>'
           +'<td>'+selHtml(da(it,'marco.status',m.id),MARCO_STATUS,m.status||'future')+'</td>'
           +'<td class="mono">'+edSpan(da(it,'marco.valor',m.id),m.valor?fmtBRL(m.valor):'',false,'—')+'</td>'
