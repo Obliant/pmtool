@@ -3289,6 +3289,16 @@ function openAddPortMarco(itemId){
   document.getElementById('m-statusfin').value='';
   document.getElementById('modal-marco').classList.add('open');
 }
+function addPortMarco(itemId){
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var nome=(document.getElementById('marco-nome-'+itemId).value||'').trim();
+  var valorTxt=(document.getElementById('marco-valor-'+itemId).value||'').trim();
+  if(!nome){ toast('Escreva a entrega do marco'); return; }
+  if(!it.marcos) it.marcos=[];
+  it.marcos.push({id:portfolioData.nextId++,nome:nome,valor:valorTxt?parseBRL(valorTxt):0,status:'future',planDate:'',statusFin:''});
+  savePortfolioData(); renderPortfolioScreen(); toast('Marco adicionado');
+  var again=document.getElementById('marco-nome-'+itemId); if(again) again.focus();
+}
 function deletePortMarco(itemId,marcoId){
   if(!confirm('Excluir marco?')) return;
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
@@ -3768,18 +3778,22 @@ function portItemDetailHTML(it){
     +'<input type="text" id="doc-url-'+it.id+'" placeholder="Cole o link do SharePoint/OneDrive" style="flex:2;min-width:200px" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortDoc('+it.id+');}">'
     +'<button class="btn btn-sm" onclick="addPortDoc('+it.id+')">+ Documento</button></div>';
   var marcos=it.marcos||[];
-  var marcosHTML=marcos.length
-    ? '<div style="overflow-x:auto"><table class="tbl" style="margin-top:4px"><thead><tr><th style="width:30px" title="Concluído">✓</th><th>Marco</th><th>Planejado</th><th>Status</th><th>Valor (R$)</th><th>Financeiro</th><th></th></tr></thead><tbody>'
-      +marcos.map(function(m){
+  var totalMarcos=marcos.reduce(function(t,m){return t+(parseFloat(m.valor)||0);},0);
+  var marcosHTML=(marcos.length
+    ? '<div style="overflow-x:auto"><table class="tbl" style="margin-top:4px"><thead><tr><th style="width:30px" title="Concluído">✓</th><th style="width:34px">Nº</th><th>Entrega</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody>'
+      +marcos.map(function(m,i){
         return '<tr class="'+(m.status==='ok'?'marco-ok':'')+'"><td><input type="checkbox" '+(m.status==='ok'?'checked':'')+' onchange="togglePortMarco('+it.id+','+m.id+')" title="Marcar o marco como concluído" style="width:16px;height:16px;cursor:pointer"></td>'
-          +'<td>'+edSpan(da(it,'marco.nome',m.id),m.nome,false,'Marco','ed-b')+'</td>'
-          +'<td><input type="date" class="inl" '+da(it,'marco.planDate',m.id)+' value="'+escAttr(m.planDate||'')+'" onchange="savePortField(this)"></td>'
-          +'<td>'+selHtml(da(it,'marco.status',m.id),MARCO_STATUS,m.status||'future')+'</td>'
-          +'<td class="mono">'+edSpan(da(it,'marco.valor',m.id),m.valor?fmtBRL(m.valor):'',false,'—')+'</td>'
-          +'<td>'+selHtml(da(it,'marco.statusFin',m.id),MARCO_FIN,m.statusFin||'')+'</td>'
+          +'<td class="mono" style="color:var(--text3)">'+(i+1)+'</td>'
+          +'<td>'+edSpan(da(it,'marco.nome',m.id),m.nome,false,'Entrega','ed-b')+'</td>'
+          +'<td class="mono" style="text-align:right">'+edSpan(da(it,'marco.valor',m.id),m.valor?fmtBRL(m.valor):'',false,'R$ —')+'</td>'
           +'<td style="text-align:right;white-space:nowrap">'+delBtn('deletePortMarco',it.id,m.id)+'</td></tr>';
-      }).join('')+'</tbody></table></div>'
-    : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>';
+      }).join('')
+      +'<tr style="font-weight:700"><td></td><td></td><td style="text-align:right;color:var(--text2)">Total</td><td class="mono" style="text-align:right">'+(totalMarcos?fmtBRL(totalMarcos):'—')+'</td><td></td></tr>'
+      +'</tbody></table></div>'
+    : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum marco.</div>')
+    +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input type="text" id="marco-nome-'+it.id+'" placeholder="Entrega (ex: Planejamento – MIT024/MIT032)" style="flex:3;min-width:220px" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortMarco('+it.id+');}">'
+    +'<input type="text" id="marco-valor-'+it.id+'" placeholder="Valor (R$)" style="flex:1;min-width:110px" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortMarco('+it.id+');}">'
+    +'<button class="btn btn-sm" onclick="addPortMarco('+it.id+')">+ Marco</button></div>';
   return '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'
     +'<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px">'
     +'<button class="btn btn-sm" onclick="renomearProjeto('+it.id+')" title="Editar o nome deste projeto">✎ Renomear</button>'
@@ -3789,7 +3803,7 @@ function portItemDetailHTML(it){
     +psec('atencao','⚠️ Pontos de atenção',(it.atencao||[]).filter(function(a){return !a.done;}).length||null,atenHTML)
     +psec('obs','🗒️ Observações',null,obsHTML)
     +psec('contatos','👤 Contatos',(it.contatos||[]).length||null,contatosHTML+portContatoFormHTML(it))
-    +(it.modelo==='act'?'':psec('marcos',it.modelo==='escopo'?'🚩 Marcos financeiros':'🚩 Marcos',marcos.length||null,marcosHTML,'<button class="btn btn-sm" onclick="openAddPortMarco('+it.id+')">+ Marco</button>'))
+    +(it.modelo==='act'?'':psec('marcos',it.modelo==='escopo'?'🚩 Marcos financeiros':'🚩 Marcos',marcos.length||null,marcosHTML))
     +psec('docs','📎 Documentos (links)',docs.length||null,docsHTML)
     +psec('pend','✅ Pendências',(pendList.filter(function(p){return !p.done;}).length||null)&&(pendList.filter(function(p){return !p.done;}).length+' aberta'+(pendList.filter(function(p){return !p.done;}).length===1?'':'s')),pendHTML)
     +'</div>';
