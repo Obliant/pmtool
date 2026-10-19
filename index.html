@@ -1517,6 +1517,16 @@ function loadPortfolioData(){
         it.escopo='';
       });
     }
+    if(d.seedsApplied.indexOf('modelo-contrato-v1')<0){
+      d.seedsApplied.push('modelo-contrato-v1'); mudou=true;
+      d.itens.forEach(function(it){
+        if(it.modelo) return;
+        if(it.goliveNA){ it.modelo='act'; return; }
+        var t=String(it.obsTexto||'');
+        if(/Modelo:\s*Horas recorrentes/i.test(t)) it.modelo='act';
+        else if(/Modelo:\s*Escopo\s*fechado/i.test(t)) it.modelo='escopo';
+      });
+    }
     if(mudou) localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(d));
     return d;
   } catch(e){ return {itens:[],nextId:1}; }
@@ -3268,7 +3278,7 @@ function segInfo(k){ return SEGS.find(function(x){return x.k===k;})||null; }
 function segBadge(it){ var g=segInfo(it.segmento); return g?'<span class="psec-n" style="margin-left:6px" title="Carteira '+g.label+' · '+g.resp+'">'+g.label+'</span>':''; }
 // Go live: previsão digitada à mão por projeto; "ACT" = customização, onde go live não se aplica
 function goLiveInfo(it){
-  if(it.goliveNA) return {na:true,txt:'N/A — ACT (customização)',cls:'na'};
+  if(it.modelo==='act'||it.goliveNA) return {na:true,txt:'N/A — ACT (sustentação)',cls:'na'};
   if(!it.golive) return null;
   var dias=Math.round((new Date(it.golive+'T12:00:00')-new Date(today()+'T12:00:00'))/86400000);
   var rel=dias>1?'em '+dias+' dias':dias===1?'amanhã':dias===0?'hoje':'passou há '+(-dias)+' dia'+(dias===-1?'':'s');
@@ -3278,27 +3288,53 @@ function setGolive(id,v){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(!it) return;
   it.golive=v||''; savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview();
 }
-function setGoliveNA(id,chk){
+var MODELOS=[['','— escolha —'],['act','ACT · Pool de horas (sustentação)'],['escopo','Escopo fechado']];
+function rnd1(v){ return Math.round(v*10)/10; }
+function setModelo(id,v){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(!it) return;
-  it.goliveNA=!!chk; savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview();
+  it.modelo=v||''; delete it.goliveNA;
+  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview();
+}
+function setActCampo(id,campo,val){
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(!it) return;
+  var n=parseFloat(String(val).replace(',','.'));
+  it[campo]=(isNaN(n)||n<=0)?'':n;
+  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
+}
+function actTexto(it){
+  var hm=parseFloat(it.actHorasMes)||0, mm=parseInt(it.actMeses,10)||0;
+  return (hm?hm+'h/mês':'')+(hm&&mm?' × ':'')+(mm?mm+' mese'+(mm===1?'':'s'):'')+(hm&&mm?' = '+rnd1(hm*mm)+'h no contrato':'');
 }
 function portCardHTML(it){
     var exp=(portExpandedId===it.id);
     var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
-    var resumo=nContatos+' contato'+(nContatos===1?'':'s')+' · '+nMarcos+' marco'+(nMarcos===1?'':'s');
+    var resumo=nContatos+' contato'+(nContatos===1?'':'s')+(it.modelo==='act'?'':' · '+nMarcos+' marco'+(nMarcos===1?'':'s'));
   return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togglePortItem('+it.id+')">'
       +'<div><div class="port-name pv-nome" title="Clique para abrir o projeto">'
       +'<span class="nome-txt" '+da(it,'nome')+' data-ph="Nome do projeto" onclick="if(this.isContentEditable)event.stopPropagation()" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(it.nome)+'</span></div>'
       +'<div style="font-size:13px;margin-top:3px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',true,'+ do que se trata (ex: RM + Ahgora) — Enter cria nova linha')+'</div>'
-      +(function(){ var g=goLiveInfo(it);
-        return '<div class="gl-row" onclick="event.stopPropagation()">🚀 <b>Go live</b> '
-          +(it.goliveNA?'<span class="gl-na">N/A — ACT (customização)</span>'
-            :'<input type="date" value="'+escAttr(it.golive||'')+'" onchange="setGolive('+it.id+',this.value)" title="Previsão de go live">'+(g?'<span class="gl-badge '+g.cls+'">'+g.rel+'</span>':''))
-          +'<label class="gl-chk"><input type="checkbox" '+(it.goliveNA?'checked':'')+' onchange="setGoliveNA('+it.id+',this.checked)"> ACT (não se aplica)</label>'
-          +'<span style="margin-left:14px">📂 <b>Carteira</b></span> '
-          +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')
-          +'</div>'; })()
+      +(function(){
+        var m=it.modelo||'', g=goLiveInfo(it);
+        var h='<div class="gl-row" onclick="event.stopPropagation()">📄 <b>Modelo</b> '
+          +'<select class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600" onchange="setModelo('+it.id+',this.value)">'
+          +MODELOS.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===m?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
+        if(m==='act'){
+          h+='<span style="margin-left:10px">⏱</span><input type="number" min="0" step="0.5" value="'+escAttr(String(it.actHorasMes||''))+'" placeholder="horas" style="width:78px" onchange="setActCampo('+it.id+',\'actHorasMes\',this.value)"> h/mês'
+            +' × <input type="number" min="0" step="1" value="'+escAttr(String(it.actMeses||''))+'" placeholder="meses" style="width:70px" onchange="setActCampo('+it.id+',\'actMeses\',this.value)"> meses'
+            +((parseFloat(it.actHorasMes)&&parseInt(it.actMeses,10))?'<span class="gl-badge">= '+rnd1(parseFloat(it.actHorasMes)*parseInt(it.actMeses,10))+'h no contrato</span>':'');
+        } else {
+          h+='<span style="margin-left:10px">🚀 <b>Go live</b></span> <input type="date" value="'+escAttr(it.golive||'')+'" onchange="setGolive('+it.id+',this.value)" title="Previsão de go live">'+(g&&!g.na?'<span class="gl-badge '+g.cls+'">'+g.rel+'</span>':'');
+        }
+        h+='</div>';
+        if(m==='escopo'){
+          h+='<div class="gl-row" onclick="event.stopPropagation()">🧩 <b>ERP</b> '+edSpan(da(it,'erp'),it.erp||'',false,'+ ERP (ex: RM, Protheus)')
+            +'<span style="margin-left:14px">🤝 <b>Terceirizada</b></span> '+edSpan(da(it,'terceirizada'),it.terceirizada||'',false,'+ terceirizada')+'</div>';
+        }
+        h+='<div class="gl-row" onclick="event.stopPropagation()">📂 <b>Carteira</b> '
+          +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')+'</div>';
+        return h;
+      })()
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+resumo+'</div></div>'
       +'<div style="display:flex;align-items:center;gap:4px">'
       +'<button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deletePortItem('+it.id+')" title="Excluir projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
@@ -3469,8 +3505,14 @@ function renderPendenciasScreen(){
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
       +'<div><div class="pv-nome" onclick="openPortfolioItem('+it.id+')" title="Abrir este projeto no Portfólio">'+escText(it.nome)+'</div>'
       +(it.resumo?'<div style="font-size:13px;margin-top:2px;white-space:pre-line">'+escText(it.resumo)+'</div>':'')
-      +(function(){ var g=goLiveInfo(it); if(!g) return '';
-        return '<div class="gl-row">🚀 <b>Go live</b> '+(g.na?'<span class="gl-na">'+g.txt+'</span>':'<span>'+g.data+'</span><span class="gl-badge '+g.cls+'">'+g.rel+'</span>')+'</div>'; })()
+      +(function(){
+        var m=it.modelo||'';
+        if(m==='act') return '<div class="gl-row">⏱ <b>ACT</b> · pool de horas'+(actTexto(it)?' · '+actTexto(it):'')+'</div>';
+        var g=goLiveInfo(it), x='';
+        if(g&&!g.na) x+='<div class="gl-row">🚀 <b>Go live</b> <span>'+g.data+'</span><span class="gl-badge '+g.cls+'">'+g.rel+'</span></div>';
+        if(m==='escopo'&&(it.erp||it.terceirizada)) x+='<div class="gl-row">'+(it.erp?'🧩 <b>ERP</b> '+escText(it.erp):'')+(it.erp&&it.terceirizada?' · ':'')+(it.terceirizada?'🤝 '+escText(it.terceirizada):'')+'</div>';
+        return x;
+      })()
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
       +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" onclick="togglePendResumo('+it.id+')" title="Gerar um resumo em texto deste projeto">📝 Resumo</button></span></div>'
       +resumoBoxHTML(it)
@@ -3515,7 +3557,7 @@ function portLookup(el){
   if(!it) return {};
   var id=(d.id!=null)?parseInt(d.id,10):null, parts=d.f.split('.'), obj=null, key=null, req=false;
   function byId(list){ return (list||[]).find(function(x){return x.id===id;}); }
-  if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'||d.f==='resumo'||d.f==='segmento'){ obj=it; key=d.f; req=(d.f==='nome'); }
+  if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'||d.f==='resumo'||d.f==='segmento'||d.f==='erp'||d.f==='terceirizada'){ obj=it; key=d.f; req=(d.f==='nome'); }
   else if(d.f==='atencao'){ obj=byId(it.atencao); key='texto'; req=true; }
   else if(d.f==='pend'){ obj=byId(it.pendencias); key='texto'; req=true; }
   else if(parts[0]==='contato'){ obj=byId(it.contatos); key=parts[1]; req=(key==='nome'); }
@@ -3715,7 +3757,7 @@ function portItemDetailHTML(it){
     +psec('atencao','⚠️ Pontos de atenção',(it.atencao||[]).filter(function(a){return !a.done;}).length||null,atenHTML)
     +psec('obs','🗒️ Observações',null,obsHTML)
     +psec('contatos','👤 Contatos',(it.contatos||[]).length||null,contatosHTML+portContatoFormHTML(it))
-    +psec('marcos','🚩 Marcos',marcos.length||null,marcosHTML,'<button class="btn btn-sm" onclick="openAddPortMarco('+it.id+')">+ Marco</button>')
+    +(it.modelo==='act'?'':psec('marcos',it.modelo==='escopo'?'🚩 Marcos financeiros':'🚩 Marcos',marcos.length||null,marcosHTML,'<button class="btn btn-sm" onclick="openAddPortMarco('+it.id+')">+ Marco</button>'))
     +psec('docs','📎 Documentos (links)',docs.length||null,docsHTML)
     +psec('pend','✅ Pendências',(pendList.filter(function(p){return !p.done;}).length||null)&&(pendList.filter(function(p){return !p.done;}).length+' aberta'+(pendList.filter(function(p){return !p.done;}).length===1?'':'s')),pendHTML)
     +'</div>';
