@@ -119,6 +119,22 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .pv-linha{font-size:12.5px;color:var(--text2);margin-bottom:14px}
 .pv-linha b{color:var(--text)}
 .sum-curto .sum-t{margin-top:6px}
+.chip-sel{appearance:none;-webkit-appearance:none;border:1px solid var(--border-md);background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5'/></svg>") no-repeat right 9px center;border-radius:999px;padding:3px 26px 3px 11px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;width:auto;font-family:inherit}
+.chip-sel:hover{border-color:var(--accent)}
+.chip-act{background-color:#f3e8ff;border-color:#e0c8fb;color:#6b21a8}
+.chip-escopo{background-color:#e0f2fe;border-color:#bfe1f7;color:#075985}
+.chip-smb{background-color:#e3f4ea;border-color:#c5e6d2;color:#1f6b45}
+.chip-large{background-color:#fff1dc;border-color:#f6dcae;color:#9a5b00}
+.chip-ro{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600;margin-top:4px}
+.pc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pc-meta{display:flex;flex-wrap:wrap;margin-top:10px;border:1px solid var(--border);border-radius:10px;background:#fafcfb;overflow:hidden}
+.pc-cell{padding:7px 14px;border-right:1px solid var(--border);min-width:120px}
+.pc-cell:last-child{border-right:none}
+.pc-lbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+.pc-val{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;white-space:nowrap}
+.pc-val input{width:auto;border:1px solid transparent;background:transparent;padding:1px 4px;margin-left:-4px;font-size:13px;font-weight:600;font-family:inherit;border-radius:6px}
+.pc-val input:hover,.pc-val input:focus{border-color:var(--border-md);background:#fff}
+.pc-val .ed{font-weight:600}
 .gl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;margin-top:6px;color:var(--text2)}
 .gl-row input[type=date]{width:auto;padding:2px 6px;font-size:12px;border:1px solid var(--border-md);background:#fff;border-radius:6px}
 .gl-chk{display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text3)}
@@ -3288,7 +3304,7 @@ function setGolive(id,v){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(!it) return;
   it.golive=v||''; savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); renderPortfolioPreview();
 }
-var MODELOS=[['','— escolha —'],['act','ACT · Pool de horas (sustentação)'],['escopo','Escopo fechado']];
+var MODELOS=[['','— modelo —'],['act','ACT · Pool de horas'],['escopo','Escopo fechado']];
 function rnd1(v){ return Math.round(v*10)/10; }
 function setModelo(id,v){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===id;}); if(!it) return;
@@ -3306,42 +3322,40 @@ function actTexto(it){
   return (hm?hm+'h/mês':'')+(hm&&mm?' × ':'')+(mm?mm+' mese'+(mm===1?'':'s'):'')+(hm&&mm?' = '+rnd1(hm*mm)+'h no contrato':'');
 }
 function portCardHTML(it){
-    var exp=(portExpandedId===it.id);
-    var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
-    var resumo=nContatos+' contato'+(nContatos===1?'':'s')+(it.modelo==='act'?'':' · '+nMarcos+' marco'+(nMarcos===1?'':'s'));
+  var exp=(portExpandedId===it.id);
+  var nMarcos=(it.marcos||[]).length, nContatos=(it.contatos||[]).length;
+  var contagem=nContatos+' contato'+(nContatos===1?'':'s')+(it.modelo==='act'?'':' · '+nMarcos+' marco'+(nMarcos===1?'':'s'));
+  var m=it.modelo||'', g=goLiveInfo(it);
+  var chipModelo='<select class="chip-sel chip-'+(m||'none')+'" title="Modelo do contrato" onchange="setModelo('+it.id+',this.value)">'
+    +MODELOS.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===m?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
+  var chipCart=selHtml(da(it,'segmento'),[['','— carteira —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="chip-sel chip-'+(it.segmento||'none')+'" title="Carteira"');
+  var cells='';
+  if(m==='act'){
+    var hm=parseFloat(it.actHorasMes)||0, mm=parseInt(it.actMeses,10)||0;
+    cells='<div class="pc-cell"><div class="pc-lbl">⏱ Horas por mês</div><div class="pc-val"><input type="number" min="0" step="0.5" value="'+escAttr(String(it.actHorasMes||''))+'" placeholder="—" style="width:70px" onchange="setActCampo('+it.id+',\'actHorasMes\',this.value)"> h</div></div>'
+      +'<div class="pc-cell"><div class="pc-lbl">Meses de contrato</div><div class="pc-val"><input type="number" min="0" step="1" value="'+escAttr(String(it.actMeses||''))+'" placeholder="—" style="width:60px" onchange="setActCampo('+it.id+',\'actMeses\',this.value)"></div></div>'
+      +(hm&&mm?'<div class="pc-cell"><div class="pc-lbl">Total no contrato</div><div class="pc-val">'+rnd1(hm*mm)+' h</div></div>':'');
+  } else {
+    cells='<div class="pc-cell"><div class="pc-lbl">🚀 Go live</div><div class="pc-val"><input type="date" value="'+escAttr(it.golive||'')+'" onchange="setGolive('+it.id+',this.value)" title="Previsão de go live">'+(g&&!g.na?'<span class="gl-badge '+g.cls+'">'+g.rel+'</span>':'')+'</div></div>';
+    if(m==='escopo'){
+      cells+='<div class="pc-cell"><div class="pc-lbl">🧩 ERP</div><div class="pc-val">'+edSpan(da(it,'erp'),it.erp||'',false,'+ ERP')+'</div></div>'
+        +'<div class="pc-cell"><div class="pc-lbl">🤝 Terceirizada</div><div class="pc-val">'+edSpan(da(it,'terceirizada'),it.terceirizada||'',false,'+ terceirizada')+'</div></div>';
+    }
+  }
   return '<div class="card" id="portcard-'+it.id+'" style="margin-bottom:12px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togglePortItem('+it.id+')">'
-      +'<div><div class="port-name pv-nome" title="Clique para abrir o projeto">'
-      +'<span class="nome-txt" '+da(it,'nome')+' data-ph="Nome do projeto" onclick="if(this.isContentEditable)event.stopPropagation()" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(it.nome)+'</span></div>'
-      +'<div style="font-size:13px;margin-top:3px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',true,'+ do que se trata (ex: RM + Ahgora) — Enter cria nova linha')+'</div>'
-      +(function(){
-        var m=it.modelo||'', g=goLiveInfo(it);
-        var h='<div class="gl-row" onclick="event.stopPropagation()">📄 <b>Modelo</b> '
-          +'<select class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600" onchange="setModelo('+it.id+',this.value)">'
-          +MODELOS.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===m?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
-        if(m==='act'){
-          h+='<span style="margin-left:10px">⏱</span><input type="number" min="0" step="0.5" value="'+escAttr(String(it.actHorasMes||''))+'" placeholder="horas" style="width:78px" onchange="setActCampo('+it.id+',\'actHorasMes\',this.value)"> h/mês'
-            +' × <input type="number" min="0" step="1" value="'+escAttr(String(it.actMeses||''))+'" placeholder="meses" style="width:70px" onchange="setActCampo('+it.id+',\'actMeses\',this.value)"> meses'
-            +((parseFloat(it.actHorasMes)&&parseInt(it.actMeses,10))?'<span class="gl-badge">= '+rnd1(parseFloat(it.actHorasMes)*parseInt(it.actMeses,10))+'h no contrato</span>':'');
-        } else {
-          h+='<span style="margin-left:10px">🚀 <b>Go live</b></span> <input type="date" value="'+escAttr(it.golive||'')+'" onchange="setGolive('+it.id+',this.value)" title="Previsão de go live">'+(g&&!g.na?'<span class="gl-badge '+g.cls+'">'+g.rel+'</span>':'');
-        }
-        h+='</div>';
-        if(m==='escopo'){
-          h+='<div class="gl-row" onclick="event.stopPropagation()">🧩 <b>ERP</b> '+edSpan(da(it,'erp'),it.erp||'',false,'+ ERP (ex: RM, Protheus)')
-            +'<span style="margin-left:14px">🤝 <b>Terceirizada</b></span> '+edSpan(da(it,'terceirizada'),it.terceirizada||'',false,'+ terceirizada')+'</div>';
-        }
-        h+='<div class="gl-row" onclick="event.stopPropagation()">📂 <b>Carteira</b> '
-          +selHtml(da(it,'segmento'),[['','— escolha —'],['smb','SMB · Fábio'],['large','Large · Daiane']],it.segmento||'').replace('class="inl"','class="inl" style="border-color:var(--border-md);background:#fff;font-weight:600"')+'</div>';
-        return h;
-      })()
-      +'<div style="font-size:12px;color:var(--text2);margin-top:2px">'+resumo+'</div></div>'
-      +'<div style="display:flex;align-items:center;gap:4px">'
-      +'<button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deletePortItem('+it.id+')" title="Excluir projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
-      +'<span style="font-size:19px;line-height:1;color:var(--text2);padding-left:6px">'+(exp?'▾':'▸')+'</span>'
-      +'</div></div>'
-      +(exp?portItemDetailHTML(it):'')
-      +'</div>';
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer" onclick="togglePortItem('+it.id+')">'
+    +'<div style="flex:1;min-width:0"><div class="port-name pv-nome" title="Clique para abrir o projeto">'
+    +'<span class="nome-txt" '+da(it,'nome')+' data-ph="Nome do projeto" onclick="if(this.isContentEditable)event.stopPropagation()" onblur="savePortField(this)" onkeydown="edKey(event,this)">'+escText(it.nome)+'</span></div>'
+    +'<div class="pc-chips" onclick="event.stopPropagation()">'+chipModelo+chipCart+'</div>'
+    +'<div style="font-size:13px;margin-top:8px;color:var(--text)" onclick="event.stopPropagation()" title="Do que se trata o projeto (clique para escrever)">'+edSpan(da(it,'resumo'),it.resumo||'',true,'+ do que se trata (ex: RM + Ahgora) — Enter cria nova linha')+'</div>'
+    +'<div class="pc-meta" onclick="event.stopPropagation()">'+cells+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-top:8px">'+contagem+'</div></div>'
+    +'<div style="display:flex;align-items:center;gap:4px">'
+    +'<button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deletePortItem('+it.id+')" title="Excluir projeto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
+    +'<span style="font-size:19px;line-height:1;color:var(--text2);padding-left:6px">'+(exp?'▾':'▸')+'</span>'
+    +'</div></div>'
+    +(exp?portItemDetailHTML(it):'')
+    +'</div>';
 }
 function renderPortfolioScreen(){
   if(!portfolioData.itens) portfolioData.itens=[];
@@ -3506,12 +3520,19 @@ function renderPendenciasScreen(){
       +'<div><div class="pv-nome" onclick="openPortfolioItem('+it.id+')" title="Abrir este projeto no Portfólio">'+escText(it.nome)+'</div>'
       +(it.resumo?'<div style="font-size:13px;margin-top:2px;white-space:pre-line">'+escText(it.resumo)+'</div>':'')
       +(function(){
-        var m=it.modelo||'';
-        if(m==='act') return '<div class="gl-row">⏱ <b>ACT</b> · pool de horas'+(actTexto(it)?' · '+actTexto(it):'')+'</div>';
-        var g=goLiveInfo(it), x='';
-        if(g&&!g.na) x+='<div class="gl-row">🚀 <b>Go live</b> <span>'+g.data+'</span><span class="gl-badge '+g.cls+'">'+g.rel+'</span></div>';
-        if(m==='escopo'&&(it.erp||it.terceirizada)) x+='<div class="gl-row">'+(it.erp?'🧩 <b>ERP</b> '+escText(it.erp):'')+(it.erp&&it.terceirizada?' · ':'')+(it.terceirizada?'🤝 '+escText(it.terceirizada):'')+'</div>';
-        return x;
+        var m=it.modelo||'', g=goLiveInfo(it), cells='';
+        var chip=m==='act'?'<span class="chip-ro chip-act">ACT · Pool de horas</span>':m==='escopo'?'<span class="chip-ro chip-escopo">Escopo fechado</span>':'';
+        if(m==='act'){
+          var hm=parseFloat(it.actHorasMes)||0, mm=parseInt(it.actMeses,10)||0;
+          if(hm) cells+='<div class="pc-cell"><div class="pc-lbl">⏱ Horas/mês</div><div class="pc-val">'+hm+' h</div></div>';
+          if(mm) cells+='<div class="pc-cell"><div class="pc-lbl">Meses</div><div class="pc-val">'+mm+'</div></div>';
+          if(hm&&mm) cells+='<div class="pc-cell"><div class="pc-lbl">Total</div><div class="pc-val">'+rnd1(hm*mm)+' h</div></div>';
+        } else {
+          if(g&&!g.na) cells+='<div class="pc-cell"><div class="pc-lbl">🚀 Go live</div><div class="pc-val">'+g.data+'<span class="gl-badge '+g.cls+'">'+g.rel+'</span></div></div>';
+          if(m==='escopo'&&it.erp) cells+='<div class="pc-cell"><div class="pc-lbl">🧩 ERP</div><div class="pc-val">'+escText(it.erp)+'</div></div>';
+          if(m==='escopo'&&it.terceirizada) cells+='<div class="pc-cell"><div class="pc-lbl">🤝 Terceirizada</div><div class="pc-val">'+escText(it.terceirizada)+'</div></div>';
+        }
+        return (chip?'<div>'+chip+'</div>':'')+(cells?'<div class="pc-meta">'+cells+'</div>':'');
       })()
       +'<div style="font-size:12px;color:var(--text2);margin-top:2px"><b style="color:#b45309">'+c.ab.length+' aberta'+(c.ab.length===1?'':'s')+'</b> · '+c.ok.length+' concluída'+(c.ok.length===1?'':'s')+'</div></div>'
       +'<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" onclick="togglePendResumo('+it.id+')" title="Gerar um resumo em texto deste projeto">📝 Resumo</button></span></div>'
