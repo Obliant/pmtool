@@ -53,12 +53,9 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 #proj-screen,#portfolio-screen,#embed-screen,#projetos-screen,#pendencias-screen{left:240px}
 .pv-chip{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12px;cursor:pointer;color:var(--text2)}
 .pv-chip.active{background:#2d6a4f;border-color:#2d6a4f;color:#fff}
-.grp-sel{border:1px solid transparent;cursor:pointer;font-size:10px;line-height:1;padding:3px 6px;border-radius:999px;white-space:nowrap;font-weight:600;letter-spacing:.02em;appearance:none;-webkit-appearance:none;text-align:center;flex-shrink:0}
-.grp-geral{background:#eef2f7;color:#5b6b7f;border-color:#dde4ec}
-.grp-cp{background:#e7f0ff;color:#1d4ed8;border-color:#cfe0ff}
-.grp-boadigital{background:#fff1dc;color:#b45309;border-color:#ffe0bb}
-.grp-suplavia{background:#ede9fe;color:#6d28d9;border-color:#ddd6fe}
-.grp-bg{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.cp-btn{border:none;background:transparent;cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:6px;opacity:.3;filter:grayscale(1);flex-shrink:0}
+.cp-btn.on{opacity:1;filter:none;background:#e7f0ff}
+.pend-cp{background:#f5f9ff}
 .pv-kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:130px}
 .pv-kpi b{display:block;font-size:22px;line-height:1.2}.pv-kpi span{font-size:11px;color:var(--text3)}
 .cnav-section{padding:16px 20px 6px;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;line-height:1.4;color:rgba(255,255,255,.3)}
@@ -3213,8 +3210,7 @@ function addPortPendencia(itemId){
   if(!texto){toast('Escreva a pendência');return;}
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   if(!it.pendencias) it.pendencias=[];
-  var selG=document.getElementById('pend-grupo-'+itemId);
-  it.pendencias.unshift({id:portfolioData.nextId++,texto:texto,done:false,data:today(),grupo:(selG&&selG.value)||'geral'});
+  it.pendencias.unshift({id:portfolioData.nextId++,texto:texto,done:false,data:today()});
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); toast('Pendência adicionada');
   var again=document.getElementById('pend-texto-'+itemId); if(again) again.focus(); // cursor segue na caixinha
 }
@@ -3261,24 +3257,13 @@ function movePortPendencia(itemId,pendId,targetId,after){
   document.addEventListener('dragend',function(){ drag=null; limpa(); soltaDraggable(); });
   document.addEventListener('mouseup',soltaDraggable);
 })();
-var PEND_GRUPOS=[
-  {k:'geral',label:'Geral',titulo:'Pendência geral'},
-  {k:'cp',label:'CP',titulo:'Checkpoint interno (CP)'},
-  {k:'boadigital',label:'Boa Digital',titulo:'Checkpoint · Boa Digital'},
-  {k:'suplavia',label:'Supla Via',titulo:'Checkpoint · Supla Via'},
-  {k:'bg',label:'BG',titulo:'Checkpoint · BG'}
-];
-function grupoInfo(k){ return PEND_GRUPOS.find(function(g){return g.k===(k||'geral');})||PEND_GRUPOS[0]; }
-function grpBtn(itemId,p){
-  var g=grupoInfo(p.grupo);
-  return '<select class="grp-sel grp-'+g.k+'" title="'+g.titulo+'" onchange="setPortGrupo('+itemId+','+p.id+',this.value)">'
-    +PEND_GRUPOS.map(function(o){return '<option value="'+o.k+'"'+(o.k===g.k?' selected':'')+'>'+o.label+'</option>';}).join('')
-    +'</select>';
+function cpBtn(itemId,p){
+  return '<button class="cp-btn'+(p.checkpoint?' on':'')+'" onclick="togglePortCheckpoint('+itemId+','+p.id+')" title="'+(p.checkpoint?'Vai para o checkpoint — clique para tirar':'Marcar para levar ao checkpoint')+'">👥</button>';
 }
-function setPortGrupo(itemId,pendId,valor){
+function togglePortCheckpoint(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
-  p.grupo=valor||'geral';
+  p.checkpoint=!p.checkpoint;
   savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen();
 }
 function urgBtn(itemId,p){
@@ -3537,24 +3522,21 @@ function renderPendenciasScreen(){
   document.getElementById('pend-kpis').innerHTML='<div class="pv-linha"><b>'+totAb+'</b> pendência'+(totAb===1?'':'s')+' aberta'+(totAb===1?'':'s')
     +(urg.length?' · <b style="color:var(--danger)">'+urg.length+' urgente'+(urg.length===1?'':'s')+'</b>':'')
     +' · '+projAb+' projeto'+(projAb===1?'':'s')+' · '+totOk+' concluída'+(totOk===1?'':'s')+'</div>';
-  var contaGrupo={};
-  itens.forEach(function(it){ (it.pendencias||[]).forEach(function(p){ if(p.done) return; var k=(p.grupo||'geral'); contaGrupo[k]=(contaGrupo[k]||0)+1; }); });
+  var totCp=0;
+  itens.forEach(function(it){ (it.pendencias||[]).forEach(function(p){ if(!p.done&&p.checkpoint) totCp++; }); });
   document.getElementById('pend-filtros').innerHTML=
     [['abertas','Abertas'],['todas','Todas'],['concluidas','Concluídas']].map(function(o){
       return '<span class="pv-chip'+(pendFiltro===o[0]?' active':'')+'" onclick="setPendFiltro(\''+o[0]+'\')">'+o[1]+'</span>';
     }).join('')
     +'<span style="width:1px;background:var(--border);margin:0 6px"></span>'
-    +[['todos','Todos os tipos',null]].concat(PEND_GRUPOS.map(function(g){return [g.k,g.titulo,g.k];})).map(function(o){
-      var n=o[2]?(contaGrupo[o[2]]||0):totAb;
-      return '<span class="pv-chip'+(pendGrupo===o[0]?' active':'')+'" onclick="setPendGrupo(\''+o[0]+'\')">'+o[1]+(n?' <b>'+n+'</b>':'')+'</span>';
-    }).join('');
+    +'<span class="pv-chip'+(pendGrupo==='checkpoint'?' active':'')+'" onclick="setPendGrupo(\''+(pendGrupo==='checkpoint'?'todos':'checkpoint')+'\')" title="Só o que precisa ser levado ao checkpoint">👥 Checkpoint'+(totCp?' <b>'+totCp+'</b>':'')+'</span>';
   if(!itens.length){ list.innerHTML='<div class="empty-state"><h3>Nenhum projeto no portfólio</h3><p>Inclua projetos em <strong>Portfólio TOTVS</strong>.</p></div>'; return; }
   var cards=itens.map(function(it){
     var all=it.pendencias||[];
     var ab=all.filter(function(p){return !p.done;}), ok=all.filter(function(p){return p.done;});
     var show=all.filter(function(p){
       var okStatus = pendFiltro==='todas' || (pendFiltro==='abertas'?!p.done:p.done);
-      var okGrupo  = pendGrupo==='todos' || (p.grupo||'geral')===pendGrupo;
+      var okGrupo  = pendGrupo!=='checkpoint' || !!p.checkpoint;
       return okStatus && okGrupo;
     });
     return {it:it,ab:ab,ok:ok,show:show};
@@ -3569,7 +3551,7 @@ function renderPendenciasScreen(){
           +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
         +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
         +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
-        +grpBtn(it.id,p)
+        +(p.done?'':cpBtn(it.id,p))
         +(p.done?'':urgBtn(it.id,p))+'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
         +delBtn('deletePortPendencia',it.id,p.id)
         +'</div>';
@@ -3800,7 +3782,6 @@ function portItemDetailHTML(it){
       }).join('')
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhuma pendência.</div>')
     +'<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="pend-texto-'+it.id+'" placeholder="Nova pendência..." style="flex:1;min-width:0" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addPortPendencia('+it.id+');}">'
-    +'<select id="pend-grupo-'+it.id+'" title="Tipo da pendência" style="flex:0 0 118px;width:118px;font-size:12px">'+PEND_GRUPOS.map(function(g){return '<option value="'+g.k+'" title="'+g.titulo+'">'+g.label+'</option>';}).join('')+'</select>'
     +'<button class="btn btn-sm" onclick="addPortPendencia('+it.id+')">+ Pendência</button></div>';
   var docs=it.docs||[];
   var docsHTML=(docs.length
