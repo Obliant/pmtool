@@ -111,6 +111,10 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .urg-grupo-h .urg-proj:hover{text-decoration:underline}
 .urg-item{display:flex;align-items:center;gap:8px;padding:6px 0 6px 4px;border-top:1px dashed #f3d3d3;font-size:13px}
 .urg-grupo-h + .urg-item{border-top:none}
+.pend-destaques{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:14px;align-items:start;margin-bottom:14px}
+.pend-destaques > div:empty{display:none}
+.pend-destaques .urg-box,.pend-destaques .cp-box{margin-bottom:0}
+@media(max-width:1100px){.pend-destaques{grid-template-columns:1fr}}
 .cp-box{background:#f4f8ff;border:1px solid #c7d9f5;border-radius:10px;padding:12px 14px;margin-bottom:14px}
 .cp-box .urg-h{color:#1d4ed8}
 .cp-box .urg-grupo{border-top-color:#c7d9f5}
@@ -428,8 +432,7 @@ textarea{resize:vertical;min-height:60px}
       <div class="topbar">
         <div><h2 style="font-size:22px">✅ Pendências por projeto</h2><div class="topbar-sub">Todas as pendências do Portfólio TOTVS reunidas, agrupadas por projeto</div></div>
       </div>
-      <div id="pend-urgentes"></div>
-      <div id="pend-checkpoint"></div>
+      <div class="pend-destaques"><div id="pend-urgentes"></div><div id="pend-checkpoint"></div></div>
       <div id="pend-kpis"></div>
       <div id="pend-filtros" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
       <div id="pend-view-list"></div>
