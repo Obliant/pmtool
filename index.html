@@ -3270,7 +3270,7 @@ function movePortPendencia(itemId,pendId,targetId,after){
   document.addEventListener('mouseup',soltaDraggable);
 })();
 function cpBtn(itemId,p){
-  return '<button class="cp-btn'+(p.checkpoint?' on':'')+'" onclick="togglePortCheckpoint('+itemId+','+p.id+')" title="'+(p.checkpoint?'Vai para o checkpoint — clique para tirar':'Marcar para levar ao checkpoint')+'">👥</button>';
+  return '<button class="cp-btn'+(p.checkpoint?' on':'')+'" onclick="togglePortCheckpoint('+itemId+','+p.id+')" title="'+(p.checkpoint?'Vai ao checkpoint com parceiros e Regis — clique para tirar':'Marcar para levar ao checkpoint com parceiros e Regis')+'">👥</button>';
 }
 function togglePortCheckpoint(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
@@ -3547,7 +3547,7 @@ function renderPendenciasScreen(){
   var cpGrupos=[];
   itens.forEach(function(it){ var l=cps.filter(function(u){return u.it===it;}); if(l.length) cpGrupos.push({it:it,l:l}); });
   document.getElementById('pend-checkpoint').innerHTML=cps.length
-    ? '<div class="cp-box"><div class="urg-h">👥 Levar ao checkpoint <span class="psec-n" style="background:#dbeafe;color:#1d4ed8">'+cps.length+'</span>'
+    ? '<div class="cp-box"><div class="urg-h">👥 Levar ao checkpoint com parceiros e Regis <span class="psec-n" style="background:#dbeafe;color:#1d4ed8">'+cps.length+'</span>'
       +'<span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--text2)">· '+cpGrupos.length+' projeto'+(cpGrupos.length===1?'':'s')+'</span></div>'
       +cpGrupos.map(function(g){
         var sg=segInfo(g.it.segmento);
@@ -3571,7 +3571,7 @@ function renderPendenciasScreen(){
       return '<span class="pv-chip'+(pendFiltro===o[0]?' active':'')+'" onclick="setPendFiltro(\''+o[0]+'\')">'+o[1]+'</span>';
     }).join('')
     +'<span style="width:1px;background:var(--border);margin:0 6px"></span>'
-    +'<span class="pv-chip'+(pendGrupo==='checkpoint'?' active':'')+'" onclick="setPendGrupo(\''+(pendGrupo==='checkpoint'?'todos':'checkpoint')+'\')" title="Só o que precisa ser levado ao checkpoint">👥 Checkpoint'+(totCp?' <b>'+totCp+'</b>':'')+'</span>';
+    +'<span class="pv-chip'+(pendGrupo==='checkpoint'?' active':'')+'" onclick="setPendGrupo(\''+(pendGrupo==='checkpoint'?'todos':'checkpoint')+'\')" title="Só o que precisa ser levado ao checkpoint com parceiros e Regis">👥 Checkpoint parceiros e Regis'+(totCp?' <b>'+totCp+'</b>':'')+'</span>';
   if(!itens.length){ list.innerHTML='<div class="empty-state"><h3>Nenhum projeto no portfólio</h3><p>Inclua projetos em <strong>Portfólio TOTVS</strong>.</p></div>'; return; }
   var cards=itens.map(function(it){
     var all=it.pendencias||[];
