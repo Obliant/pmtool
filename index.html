@@ -56,6 +56,26 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .cp-btn{border:none;background:transparent;cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:6px;opacity:.5;filter:grayscale(1);flex-shrink:0}
 .cp-btn:hover{opacity:1;filter:none;background:#e7f0ff}
 .cp-btn.on{opacity:1;filter:none;background:#e7f0ff}
+.com-btn{border:none;background:transparent;cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:6px;opacity:.5;filter:grayscale(1);flex-shrink:0;display:inline-flex;align-items:center;gap:2px}
+.com-btn:hover,.com-btn.on{opacity:1;filter:none;background:#eef2ee}
+.com-n{font-size:10px;font-weight:700;color:var(--text2)}
+.com-wrap{margin:0 0 6px 28px}
+.com-wrap.com-w-row{margin-left:44px}
+.com-prev{font-size:12px;color:var(--text2);cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45;padding:1px 0}
+.com-prev:hover{color:var(--text)}
+.com-prev .com-data{font-size:11px;color:var(--text3);margin-right:4px}
+.com-prev .com-mais{font-size:10px;font-weight:700;color:var(--text3);margin-left:4px}
+.com-panel{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.com-add{display:flex;gap:6px;align-items:center}
+.com-add input{flex:1;min-width:0}
+.com-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px dashed var(--border);font-size:12.5px;line-height:1.45}
+.com-add + .com-item{margin-top:8px}
+.com-item .com-data{font-size:11px;color:var(--text3);white-space:nowrap;flex-shrink:0;padding-top:1px}
+.com-item .com-txt{flex:1;min-width:0}
+.com-item .com-del{border:none;background:transparent;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0 4px;border-radius:4px;opacity:0;transition:opacity .12s}
+.com-item:hover .com-del{opacity:1}
+.com-item .com-del:hover{color:var(--danger);background:#fee2e2}
+.com-vazio{font-size:12px;color:var(--text3);padding:8px 0 2px}
 .pv-kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:130px}
 .pv-kpi b{display:block;font-size:22px;line-height:1.2}.pv-kpi span{font-size:11px;color:var(--text3)}
 .cnav-section{padding:16px 20px 6px;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;line-height:1.4;color:rgba(255,255,255,.3)}
@@ -126,8 +146,8 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .sum-h .btn{text-transform:none;letter-spacing:0;font-weight:500}
 .sum-t{margin-top:8px;white-space:pre-line;line-height:1.55}
 /* Aba Pendências = visão de reunião: edição discreta, aparece ao passar o mouse na linha */
-#pend-view-list .pend-row .pend-drag,#pend-view-list .pend-row .btn-danger,#pend-view-list .pend-row .urg-btn:not(.on),#pend-view-list .pend-row .cp-btn:not(.on){opacity:0;transition:opacity .12s}
-#pend-view-list .pend-row:hover .pend-drag,#pend-view-list .pend-row:hover .btn-danger,#pend-view-list .pend-row:hover .urg-btn,#pend-view-list .pend-row:hover .cp-btn{opacity:1}
+#pend-view-list .pend-row .pend-drag,#pend-view-list .pend-row .btn-danger,#pend-view-list .pend-row .urg-btn:not(.on),#pend-view-list .pend-row .cp-btn:not(.on),#pend-view-list .pend-row .com-btn:not(.on){opacity:0;transition:opacity .12s}
+#pend-view-list .pend-row:hover .pend-drag,#pend-view-list .pend-row:hover .btn-danger,#pend-view-list .pend-row:hover .urg-btn,#pend-view-list .pend-row:hover .cp-btn,#pend-view-list .pend-row:hover .com-btn{opacity:1}
 #pend-view-list .pend-row.pend-urg{background:transparent;border-left:none;padding-left:0!important}
 #pend-view-list .pend-row.pend-urg .ed{font-weight:500}
 .pv-linha{font-size:12.5px;color:var(--text2);margin-bottom:14px}
@@ -3272,6 +3292,70 @@ function movePortPendencia(itemId,pendId,targetId,after){
 function cpBtn(itemId,p){
   return '<button class="cp-btn'+(p.checkpoint?' on':'')+'" onclick="togglePortCheckpoint('+itemId+','+p.id+')" title="'+(p.checkpoint?'Vai ao checkpoint com parceiros e Regis — clique para tirar':'Marcar para levar ao checkpoint com parceiros e Regis')+'">👥</button>';
 }
+/* ── Comentários na pendência: histórico datado, vai acrescentando até fechar ──
+   A mesma pendência aparece em mais de um bloco da tela (Urgentes, Checkpoint, lista
+   por projeto, Portfólio) — por isso o "ctx" (u/c/l/p) separa o estado aberto/fechado
+   e os ids dos campos de cada bloco. */
+var pendComAbertos={};
+function comBtn(itemId,p,ctx){
+  var n=(p.comentarios||[]).length;
+  return '<button class="com-btn'+(n?' on':'')+'" onclick="togglePendComentarios('+itemId+','+p.id+',\''+ctx+'\')" title="'+(n?n+' comentário'+(n===1?'':'s')+' — clique para ver ou acrescentar':'Acrescentar comentário')+'">💬'+(n?'<span class="com-n">'+n+'</span>':'')+'</button>';
+}
+function comDataHora(ts){
+  var d=new Date(ts); if(isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function comWrap(itemId,p,ctx){
+  var lista=p.comentarios||[], k=ctx+'-'+p.id, cls='com-wrap'+((ctx==='l'||ctx==='p')?' com-w-row':'');
+  var args=itemId+','+p.id+',\''+ctx+'\'';
+  if(!pendComAbertos[k]){
+    if(!lista.length) return '';
+    var u=lista[lista.length-1];
+    return '<div class="'+cls+'"><div class="com-prev" onclick="togglePendComentarios('+args+')" title="Clique para ver todos os comentários e acrescentar mais">'
+      +'💬 <span class="com-data">'+comDataHora(u.ts)+'</span>'+escText(u.texto)
+      +(lista.length>1?'<span class="com-mais">+'+(lista.length-1)+' anterior'+(lista.length===2?'':'es')+'</span>':'')+'</div></div>';
+  }
+  return '<div class="'+cls+'"><div class="com-panel">'
+    +'<div class="com-add"><input type="text" id="com-in-'+k+'" placeholder="Acrescentar comentário..." onkeydown="comKey(event,'+args+')">'
+    +'<button class="btn btn-sm" onclick="addPendComentario('+args+')">+ Comentário</button>'
+    +'<button class="btn btn-sm" onclick="togglePendComentarios('+args+')" title="Recolher">▴</button></div>'
+    +(lista.length
+      ? lista.slice().reverse().map(function(c){
+          return '<div class="com-item"><span class="com-data">'+comDataHora(c.ts)+'</span>'
+            +'<span class="com-txt">'+edSpan('data-it="'+itemId+'" data-f="pcom" data-id="'+p.id+'" data-cid="'+c.id+'"',c.texto,true,'Comentário')+'</span>'
+            +'<button class="com-del" onclick="deletePendComentario('+itemId+','+p.id+','+c.id+')" title="Excluir comentário">×</button></div>';
+        }).join('')
+      : '<div class="com-vazio">Nenhum comentário ainda — vá acrescentando conforme a pendência avança.</div>')
+    +'</div></div>';
+}
+function togglePendComentarios(itemId,pendId,ctx){
+  var k=ctx+'-'+pendId; pendComAbertos[k]=!pendComAbertos[k];
+  renderPortfolioScreen(); renderPendenciasScreen();
+  if(pendComAbertos[k]){ var i=document.getElementById('com-in-'+k); if(i) i.focus(); }
+}
+function comKey(e,itemId,pendId,ctx){
+  if(e.key==='Enter'){ e.preventDefault(); addPendComentario(itemId,pendId,ctx); }
+  else if(e.key==='Escape'){ togglePendComentarios(itemId,pendId,ctx); }
+}
+function addPendComentario(itemId,pendId,ctx){
+  var k=ctx+'-'+pendId, inp=document.getElementById('com-in-'+k);
+  var texto=(inp&&inp.value||'').trim();
+  if(!texto){ toast('Escreva o comentário'); return; }
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
+  if(!p.comentarios) p.comentarios=[];
+  p.comentarios.push({id:portfolioData.nextId++,texto:texto,ts:new Date().toISOString()});
+  pendComAbertos[k]=true;
+  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); toast('Comentário adicionado');
+  var again=document.getElementById('com-in-'+k); if(again) again.focus(); // cursor segue na caixinha
+}
+function deletePendComentario(itemId,pendId,comId){
+  if(!confirm('Excluir comentário?')) return;
+  var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
+  var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
+  p.comentarios=(p.comentarios||[]).filter(function(c){return c.id!==comId;});
+  savePortfolioData(); renderPortfolioScreen(); renderPendenciasScreen(); toast('Excluído');
+}
 function togglePortCheckpoint(itemId,pendId){
   var it=(portfolioData.itens||[]).find(function(x){return x.id===itemId;}); if(!it) return;
   var p=(it.pendencias||[]).find(function(p){return p.id===pendId;}); if(!p) return;
@@ -3532,8 +3616,9 @@ function renderPendenciasScreen(){
               +'<input type="checkbox" onchange="togglePortPendencia('+u.it.id+','+u.p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer" title="Marcar como feita">'
               +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+escText(u.p.texto)+'</div>'
               +(u.p.data?'<div style="font-size:11px;color:var(--text3)">desde '+fmtDate(u.p.data)+'</div>':'')+'</div>'
+              +comBtn(u.it.id,u.p,'u')
               +'<button class="urg-btn on" onclick="togglePortUrgente('+u.it.id+','+u.p.id+')" title="Tirar o destaque de urgente">⚑</button>'
-              +'</div>';
+              +'</div>'+comWrap(u.it.id,u.p,'u');
           }).join('')
           +'</div>';
       }).join('')+'</div>'
@@ -3560,8 +3645,9 @@ function renderPendenciasScreen(){
               +'<input type="checkbox" onchange="togglePortPendencia('+u.it.id+','+u.p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer" title="Marcar como feita">'
               +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+escText(u.p.texto)+(u.p.urgente?' <span style="color:var(--danger)">⚑</span>':'')+'</div>'
               +(u.p.data?'<div style="font-size:11px;color:var(--text3)">desde '+fmtDate(u.p.data)+'</div>':'')+'</div>'
+              +comBtn(u.it.id,u.p,'c')
               +'<button class="cp-btn on" onclick="togglePortCheckpoint('+u.it.id+','+u.p.id+')" title="Tirar do checkpoint">👥</button>'
-              +'</div>';
+              +'</div>'+comWrap(u.it.id,u.p,'c');
           }).join('')
           +'</div>';
       }).join('')+'</div>'
@@ -3593,10 +3679,11 @@ function renderPendenciasScreen(){
           +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
         +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
         +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
+        +comBtn(it.id,p,'l')
         +(p.done?'':cpBtn(it.id,p))
         +(p.done?'':urgBtn(it.id,p))+'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
         +delBtn('deletePortPendencia',it.id,p.id)
-        +'</div>';
+        +'</div>'+comWrap(it.id,p,'l');
     }).join('');
     return '<div class="card" style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
@@ -3664,6 +3751,7 @@ function portLookup(el){
   if(d.f==='nome'||d.f==='objetivo'||d.f==='escopo'||d.f==='resumo'||d.f==='segmento'||d.f==='erp'||d.f==='terceirizada'){ obj=it; key=d.f; req=(d.f==='nome'); }
   else if(d.f==='atencao'){ obj=byId(it.atencao); key='texto'; req=true; }
   else if(d.f==='pend'){ obj=byId(it.pendencias); key='texto'; req=true; }
+  else if(d.f==='pcom'){ var pd=byId(it.pendencias); obj=pd?(pd.comentarios||[]).find(function(c){return String(c.id)===d.cid;}):null; key='texto'; req=true; }
   else if(parts[0]==='contato'){ obj=byId(it.contatos); key=parts[1]; req=(key==='nome'); }
   else if(parts[0]==='marco'){ obj=byId(it.marcos); key=parts[1]; req=(key==='nome'); }
   else if(parts[0]==='doc'){ obj=byId(it.docs); key=parts[1]; req=(key==='nome'); }
@@ -3820,9 +3908,10 @@ function portItemDetailHTML(it){
           +(p.done?'<span class="pend-drag-ph"></span>':'<span class="pend-drag" title="Arraste para mudar a ordem">⋮⋮</span>')
           +'<input type="checkbox" '+(p.done?'checked':'')+' onchange="togglePortPendencia('+it.id+','+p.id+')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer">'
           +'<span class="'+(p.done?'pend-done':'')+'" style="flex:1">'+edSpan(da(it,'pend',p.id),p.texto,false,'Pendência')+'</span>'
+          +comBtn(it.id,p,'p')
           +(p.done?'':cpBtn(it.id,p))+(p.done?'':urgBtn(it.id,p))+'<span class="mono" style="font-size:11px;color:var(--text3);white-space:nowrap">'+fmtDate(p.data)+'</span>'
           +delBtn('deletePortPendencia',it.id,p.id)
-          +'</div>';
+          +'</div>'+comWrap(it.id,p,'p');
       }).join('')
     : '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhuma pendência.</div>');
   var docs=it.docs||[];
