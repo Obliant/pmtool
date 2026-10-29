@@ -37,7 +37,7 @@ body{font-family:'DM Sans',sans-serif;background:#f0f7f4;color:var(--text);min-h
 .proj-new{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--surface);border:1.5px dashed var(--border-md);border-radius:var(--rl);cursor:pointer;color:var(--text2);font-size:13px;transition:all .15s}
 .proj-new:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-l)}
 
-.landing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.landing-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 @media(max-width:1100px){.landing-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.landing-grid{grid-template-columns:1fr}}
 .landing-panel{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:22px 22px 18px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(13,33,55,.04)}
@@ -394,17 +394,6 @@ textarea{resize:vertical;min-height:60px}
           </div>
           <div class="proj-list" id="proj-list-screen"></div>
         </div>
-        <div class="landing-panel landing-panel-totvs">
-          <div class="landing-panel-head">
-            <h2>🧭 Gestão de Portfólio TOTVS</h2>
-            <p>Torres/verticais que você acompanha, fora dos projetos do PM Tool.</p>
-          </div>
-          <div class="proj-new" onclick="showPortfolioTotvs()" style="margin-bottom:14px;border-style:solid;border-color:var(--blue);color:var(--blue);background:var(--blue-l)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
-            Abrir Portfólio TOTVS →
-          </div>
-          <div id="portfolio-preview-list"></div>
-        </div>
         <div class="landing-panel landing-panel-demandas">
           <div class="landing-panel-head">
             <h2>📋 Demandas PMO</h2>
@@ -493,9 +482,6 @@ textarea{resize:vertical;min-height:60px}
   <div class="cnav-item" data-c="demandas" onclick="centralGo('demandas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Demandas PMO - Interno</div>
   <div class="cnav-item" data-c="novosprojetos" onclick="centralGo('novosprojetos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novos Projetos</div>
   <div class="cnav-item" data-c="horas" onclick="centralGo('horas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Horas</div>
-  <div class="cnav-section">Gestão TOTVS - Programa &amp; Portfólio</div>
-  <div class="cnav-item" data-c="portfolio" onclick="centralGo('portfolio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>Portfólio TOTVS</div>
-  <div class="cnav-item" data-c="pendencias" onclick="centralGo('pendencias')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Pendências</div>
   <div id="cnav-project" style="display:none">
     <div class="cnav-section">Projeto aberto</div>
     <div class="proj-switcher" onclick="centralGo('projetos')">
