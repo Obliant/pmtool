@@ -4542,7 +4542,10 @@ function radarImport(payload){
 window.radarImport=radarImport;
 window.radarBackup=function(){ return localStorage.getItem(RADAR_KEY)||''; };
 
+// A varredura grava por outra aba: relê do armazenamento antes de alterar, para não sobrescrever.
+window.addEventListener('storage', function(e){ if(e.key===RADAR_KEY && radarAtivo()){ radarData=loadRadar(); renderRadar(); } });
 function radarSetStatus(id, st){
+  radarData=loadRadar();
   var it=radarData.itens.find(function(x){ return x.id===id; }); if(!it) return;
   it.status=st; it.atualizadoEm=new Date().toISOString();
   it.historico.push({data:it.atualizadoEm.slice(0,10),texto:'Marcada como '+RADAR_STATUS[st].lbl.toLowerCase()+' no pmtool'});
@@ -4550,6 +4553,7 @@ function radarSetStatus(id, st){
   toast('Pendência: '+RADAR_STATUS[st].lbl);
 }
 function radarLevarDemanda(id){
+  radarData=loadRadar();
   var it=radarData.itens.find(function(x){ return x.id===id; }); if(!it || it.demandaCodigo) return;
   var dem=[]; try{ dem=JSON.parse(localStorage.getItem('admin_demandas_v1'))||[]; }catch(e){}
   var seq=parseInt(localStorage.getItem('admin_demandas_seq_v1')||'0',10)+1;
