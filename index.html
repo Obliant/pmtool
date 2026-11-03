@@ -4473,9 +4473,12 @@ var RADAR_STATUS={
   aberta:{lbl:'Aberta',cls:'badge-warn'},
   aguardando:{lbl:'Aguardando terceiro',cls:'badge-progress'},
   concluida:{lbl:'Concluída',cls:'badge-ok'},
-  descartada:{lbl:'Descartada',cls:'radar-badge-off'}
+  descartada:{lbl:'Descartada',cls:'radar-badge-off'},
+  levada:{lbl:'Levada ao PMO',cls:'radar-badge-off'}
 };
-var RADAR_ORDEM={nova:0,aberta:1,aguardando:2,concluida:3,descartada:4};
+var RADAR_ORDEM={nova:0,aberta:1,aguardando:2,concluida:3,descartada:4,levada:5};
+// Fechadas pela pessoa: saem da lista de ativas e a varredura não reabre sozinha.
+function radarTravada(st){ return st==='descartada' || st==='levada'; }
 var RADAR_LADO={obliant:'Obliant',cliente:'Cliente',totvs:'TOTVS',outro:'Outro'};
 
 function loadRadar(){
@@ -4518,8 +4521,7 @@ function radarImport(payload){
       radarData.itens.push(it); novos++;
     } else atualizados++;
     ['projeto','titulo','detalhe','responsavel','tratarCom','lado','prazo','prioridade'].forEach(function(k){ if(inp[k]!==undefined) it[k]=inp[k]; });
-    // Quem descartou foi a pessoa: a varredura não reabre sozinha.
-    if(inp.status && RADAR_STATUS[inp.status] && it.status!=='descartada') it.status=inp.status;
+    if(inp.status && RADAR_STATUS[inp.status] && !radarTravada(it.status)) it.status=inp.status;
     if(inp.historicoAdd && inp.historicoAdd.texto && !it.historico.some(function(h){ return h.texto===inp.historicoAdd.texto; })){
       it.historico.push({data:inp.historicoAdd.data||agora.slice(0,10),texto:inp.historicoAdd.texto});
     }
@@ -4565,9 +4567,9 @@ function radarLevarDemanda(id){
   var fr=document.getElementById('embedFrame'); if(fr) fr.removeAttribute('src');
   it.demandaCodigo=codigo; it.atualizadoEm=agora;
   it.historico.push({data:agora.slice(0,10),texto:'Levada para Demandas PMO (#'+codigo+')'});
-  if(it.status==='nova') it.status='aberta';
+  it.status='levada';
   saveRadar(); renderRadar();
-  toast('Criada a demanda #'+codigo);
+  toast('Criada a demanda #'+codigo+' e retirada do Radar');
 }
 function radarFiltrar(campo, valor){ radarFiltro[campo]=valor; renderRadar(); }
 
@@ -4586,7 +4588,7 @@ function radarCard(it){
     var txt='✉ '+radarFmt(f.data)+' · '+escText(f.remetente||'')+' — '+escText(f.assunto||'')+(f.anexo?' <span class="radar-anexo">📎 '+escText(f.anexo)+'</span>':'');
     return link? '<a class="radar-fonte" href="'+escAttr(link)+'" target="_blank" rel="noopener">'+txt+'</a>' : '<div class="radar-fonte">'+txt+'</div>';
   }).join('');
-  var fechada=(it.status==='concluida'||it.status==='descartada');
+  var fechada=(it.status==='concluida'||radarTravada(it.status));
   var acoes=fechada
     ? '<button class="btn btn-sm" onclick="radarSetStatus(\''+escAttr(it.id)+'\',\'aberta\')">Reabrir</button>'
     : (it.demandaCodigo?'':'<button class="btn btn-sm btn-primary" onclick="radarLevarDemanda(\''+escAttr(it.id)+'\')">Levar para Demandas PMO</button>')
@@ -4613,7 +4615,7 @@ function renderRadar(){
     return '<div class="radar-kpi"><div class="radar-kpi-n">'+cont[k[0]]+'</div><div class="radar-kpi-l">'+k[1]+'</div></div>';
   }).join('');
 
-  var filtrosSt=[['ativas','Ativas'],['nova','Novas'],['aguardando','Aguardando terceiro'],['concluida','Concluídas'],['descartada','Descartadas'],['todas','Todas']];
+  var filtrosSt=[['ativas','Ativas'],['nova','Novas'],['aguardando','Aguardando terceiro'],['concluida','Concluídas'],['levada','Levadas ao PMO'],['descartada','Descartadas'],['todas','Todas']];
   var projetos=[]; d.itens.forEach(function(it){ if(it.projeto && projetos.indexOf(it.projeto)<0) projetos.push(it.projeto); });
   projetos.sort();
   var html=filtrosSt.map(function(f){
@@ -4628,7 +4630,7 @@ function renderRadar(){
   var lista=d.itens.filter(function(it){
     if(radarFiltro.projeto && it.projeto!==radarFiltro.projeto) return false;
     if(radarFiltro.status==='todas') return true;
-    if(radarFiltro.status==='ativas') return it.status!=='concluida' && it.status!=='descartada';
+    if(radarFiltro.status==='ativas') return it.status!=='concluida' && !radarTravada(it.status);
     return it.status===radarFiltro.status;
   });
   var grupos={};
