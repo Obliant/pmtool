@@ -349,6 +349,8 @@ textarea{resize:vertical;min-height:60px}
 .radar-dem{background:var(--text);color:#fff}
 .radar-badge-off{background:var(--surface2);color:var(--text3)}
 .radar-titulo{font-size:14px;font-weight:600;line-height:1.35}
+.radar-tratar{font-size:12px;color:var(--text2);background:var(--warn-l);border-radius:6px;padding:4px 8px;align-self:flex-start}
+.radar-tratar b{color:var(--text)}
 .radar-detalhe{font-size:13px;color:var(--text2);line-height:1.5;white-space:pre-line}
 .radar-bloco{border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px}
 .radar-hist{font-size:12px;color:var(--text2);line-height:1.45}
@@ -4515,7 +4517,7 @@ function radarImport(payload){
       it={id:inp.id,projeto:'',titulo:'',detalhe:'',responsavel:'',lado:'outro',prazo:'',prioridade:'Média',status:'nova',criadoEm:agora,historico:[],fontes:[]};
       radarData.itens.push(it); novos++;
     } else atualizados++;
-    ['projeto','titulo','detalhe','responsavel','lado','prazo','prioridade'].forEach(function(k){ if(inp[k]!==undefined) it[k]=inp[k]; });
+    ['projeto','titulo','detalhe','responsavel','tratarCom','lado','prazo','prioridade'].forEach(function(k){ if(inp[k]!==undefined) it[k]=inp[k]; });
     // Quem descartou foi a pessoa: a varredura não reabre sozinha.
     if(inp.status && RADAR_STATUS[inp.status] && it.status!=='descartada') it.status=inp.status;
     if(inp.historicoAdd && inp.historicoAdd.texto && !it.historico.some(function(h){ return h.texto===inp.historicoAdd.texto; })){
@@ -4556,7 +4558,7 @@ function radarLevarDemanda(id){
     id:'d_'+Date.now()+'_'+Math.random().toString(36).slice(2,8), codigo:codigo, createdAt:agora, status:'afazer',
     nome:it.titulo, solicitante:'', tipo:'Projeto', projetoNome:it.projeto||'',
     prioridade:it.prioridade||'Média', dataSolicitacao:agora.slice(0,10), prazo:it.prazo||'',
-    observacoes:(it.responsavel?'Responsável: '+it.responsavel+'\n':'')+(it.detalhe||'')+(fontes?'\n\nVia Radar de Emails:\n'+fontes:''), comentarios:[], updatedAt:agora
+    observacoes:(it.responsavel?'Responsável: '+it.responsavel+'\n':'')+(it.tratarCom?'Tratar com: '+it.tratarCom+'\n':'')+(it.detalhe||'')+(fontes?'\n\nVia Radar de Emails:\n'+fontes:''), comentarios:[], updatedAt:agora
   });
   localStorage.setItem('admin_demandas_v1', JSON.stringify(dem));
   // O Demandas PMO embutido guarda a lista em memória: força recarregar para não sobrescrever.
@@ -4593,6 +4595,7 @@ function radarCard(it){
   return '<div class="radar-card'+(fechada?' radar-fechada':'')+(it.status==='nova'?' radar-nova':'')+'">'
     +'<div class="radar-meta">'+meta+'</div>'
     +'<div class="radar-titulo">'+escText(it.titulo)+'</div>'
+    +(it.tratarCom?'<div class="radar-tratar">👉 Tratar com: <b>'+escText(it.tratarCom)+'</b></div>':'')
     +(it.detalhe?'<div class="radar-detalhe">'+escText(it.detalhe)+'</div>':'')
     +(hist?'<div class="radar-bloco">'+hist+'</div>':'')
     +(fontes?'<div class="radar-bloco">'+fontes+'</div>':'')
