@@ -329,6 +329,37 @@ textarea{resize:vertical;min-height:60px}
 .g-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-top:16px;align-items:center}
 .g-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle}
 .g-legend span{display:inline-flex;align-items:center}
+/* RADAR DE EMAILS */
+.radar-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.radar-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px}
+.radar-kpi-n{font-size:22px;font-weight:600}
+.radar-kpi-l{font-size:12px;color:var(--text2)}
+.radar-sep{display:inline-block;width:1px;height:20px;background:var(--border-md);margin:0 6px;vertical-align:middle}
+.radar-grupo{margin-bottom:24px}
+.radar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
+.radar-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.radar-nova{border-left:3px solid var(--blue)}
+.radar-fechada{opacity:.6}
+.radar-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.radar-chip{font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--text2);white-space:nowrap}
+.radar-lado-obliant{background:var(--accent-l);color:var(--accent)}
+.radar-lado-cliente{background:var(--warn-l);color:var(--warn)}
+.radar-lado-totvs{background:var(--blue-l);color:var(--blue)}
+.radar-alta{background:var(--danger-l);color:var(--danger)}
+.radar-dem{background:var(--text);color:#fff}
+.radar-badge-off{background:var(--surface2);color:var(--text3)}
+.radar-titulo{font-size:14px;font-weight:600;line-height:1.35}
+.radar-detalhe{font-size:13px;color:var(--text2);line-height:1.5;white-space:pre-line}
+.radar-bloco{border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px}
+.radar-hist{font-size:12px;color:var(--text2);line-height:1.45}
+.radar-hist b{color:var(--text);font-weight:600;margin-right:4px}
+.radar-fonte{font-size:12px;color:var(--text2);text-decoration:none;line-height:1.45}
+a.radar-fonte:hover{color:var(--blue);text-decoration:underline}
+.radar-anexo{color:var(--purple)}
+.radar-acoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.radar-btn-ghost{border-color:transparent;color:var(--text3)}
+.radar-log-item{font-size:12px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
+.radar-log-item:last-child{border-bottom:0}
 </style>
 </head>
 <body>
@@ -449,6 +480,28 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
+<!-- RADAR DE EMAILS SCREEN (pendências encontradas na Caixa de Entrada) -->
+<div class="proj-screen" id="radar-screen">
+  <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
+    <div style="max-width:1500px;margin:0 auto">
+      <div class="topbar">
+        <div><h2 style="font-size:22px">📡 Radar de Emails</h2><div class="topbar-sub">Pendências encontradas na Caixa de Entrada e nos anexos. Leve para as Demandas PMO o que for seu.</div></div>
+        <div id="radar-ultima" style="font-size:12px;color:var(--text2)"></div>
+      </div>
+      <div class="radar-kpis" id="radar-kpis"></div>
+      <div id="radar-filtros" class="mes-tab"></div>
+      <div id="radar-lista"></div>
+      <div id="radar-empty" class="empty-state" style="display:none">
+        <h3>Nada por aqui</h3><p>Nenhuma pendência neste filtro.</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Últimas varreduras</div>
+        <div id="radar-log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- PROJETOS SCREEN (lista de projetos do PM Tool) -->
 <div class="proj-screen" id="projetos-screen">
   <div style="flex:1;overflow-y:auto;padding:48px;background:#f0f7f4">
@@ -480,6 +533,7 @@ textarea{resize:vertical;min-height:60px}
   <div class="cnav-section">Gestão PMO Obliant</div>
   <div class="cnav-item" data-c="projetos" onclick="centralGo('projetos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Gestão de Projetos</div>
   <div class="cnav-item" data-c="demandas" onclick="centralGo('demandas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Demandas PMO - Interno</div>
+  <div class="cnav-item" data-c="radar" onclick="centralGo('radar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><polyline points="4 6 12 13 20 6"/></svg>Radar de Emails</div>
   <div class="cnav-item" data-c="horas" onclick="centralGo('horas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Horas</div>
   <div id="cnav-project" style="display:none">
     <div class="cnav-section">Projeto aberto</div>
@@ -1380,7 +1434,7 @@ function centralMark(key){
   var fab=document.getElementById('central-fab'); if(fab) fab.style.display=(key==='home')?'none':'flex';
 }
 function centralHideScreens(){
-  ['welcome-screen','proj-screen','portfolio-screen','embed-screen','projetos-screen','pendencias-screen'].forEach(function(id){
+  ['welcome-screen','proj-screen','portfolio-screen','embed-screen','projetos-screen','pendencias-screen','radar-screen'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.classList.remove('active');
   });
   document.getElementById('app').style.display='none';
@@ -1400,6 +1454,7 @@ function centralGo(key){
   if(key==='home'){ showProjectScreen(); return; }
   if(key==='portfolio'){ showPortfolioTotvs(); return; }
   if(key==='pendencias'){ showPendenciasTotvs(); return; }
+  if(key==='radar'){ showRadar(); return; }
   if(key==='projetos'){ centralHideScreens(); document.getElementById('projetos-screen').classList.add('active'); centralMark('projetos'); renderProjectList(); return; }
   showEmbed(key);
   centralMark(key);
@@ -4405,6 +4460,189 @@ migrateOldData();
     if((s.containsNode&&s.containsNode(t,true))||(t.contains&&t.contains(s.anchorNode))){ e.stopPropagation(); }
   },true);
 })();
+
+// ─── RADAR DE EMAILS (pendências encontradas na Caixa de Entrada, alimentado pelo Claude) ──
+// Fica numa chave própria: não mexe nas Demandas PMO até alguém clicar em "Levar para Demandas PMO".
+var RADAR_KEY='pt_radar_email_v1';
+var radarData=null;
+var radarFiltro={status:'ativas',projeto:''};
+var RADAR_STATUS={
+  nova:{lbl:'Nova',cls:'badge-future'},
+  aberta:{lbl:'Aberta',cls:'badge-warn'},
+  aguardando:{lbl:'Aguardando terceiro',cls:'badge-progress'},
+  concluida:{lbl:'Concluída',cls:'badge-ok'},
+  descartada:{lbl:'Descartada',cls:'radar-badge-off'}
+};
+var RADAR_ORDEM={nova:0,aberta:1,aguardando:2,concluida:3,descartada:4};
+var RADAR_LADO={obliant:'Obliant',cliente:'Cliente',totvs:'TOTVS',outro:'Outro'};
+
+function loadRadar(){
+  var d=null;
+  try{ d=JSON.parse(localStorage.getItem(RADAR_KEY)); }catch(e){}
+  d=d||{};
+  if(!Array.isArray(d.itens)) d.itens=[];
+  if(!Array.isArray(d.varreduras)) d.varreduras=[];
+  return d;
+}
+function saveRadar(){ localStorage.setItem(RADAR_KEY, JSON.stringify(radarData)); }
+function showRadar(){
+  centralHideScreens();
+  document.getElementById('radar-screen').classList.add('active');
+  centralMark('radar');
+  radarData=loadRadar();
+  renderRadar();
+}
+function radarAtivo(){ var el=document.getElementById('radar-screen'); return el && el.classList.contains('active'); }
+function radarFmt(iso, comHora){
+  if(!iso) return '';
+  var d=new Date(iso.length===10? iso+'T12:00:00' : iso);
+  if(isNaN(d)) return iso;
+  var s=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  if(comHora) s+=' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  return s;
+}
+function radarLinkSeguro(u){ return /^https:\/\/[a-z0-9.-]+\//i.test(u||'') ? u : ''; }
+
+// Ponto de entrada usado pela varredura automática: cria ou atualiza itens pelo id.
+// payload = { varredura:{em,resumo}, itens:[{id,projeto,titulo,detalhe,responsavel,lado,prazo,prioridade,status,historicoAdd:{data,texto},fonteAdd:{data,remetente,assunto,anexo,link}}] }
+function radarImport(payload){
+  radarData=loadRadar();
+  var agora=new Date().toISOString(), novos=0, atualizados=0;
+  (payload.itens||[]).forEach(function(inp){
+    if(!inp || !inp.id) return;
+    var it=radarData.itens.find(function(x){ return x.id===inp.id; });
+    if(!it){
+      it={id:inp.id,projeto:'',titulo:'',detalhe:'',responsavel:'',lado:'outro',prazo:'',prioridade:'Média',status:'nova',criadoEm:agora,historico:[],fontes:[]};
+      radarData.itens.push(it); novos++;
+    } else atualizados++;
+    ['projeto','titulo','detalhe','responsavel','lado','prazo','prioridade'].forEach(function(k){ if(inp[k]!==undefined) it[k]=inp[k]; });
+    // Quem descartou foi a pessoa: a varredura não reabre sozinha.
+    if(inp.status && RADAR_STATUS[inp.status] && it.status!=='descartada') it.status=inp.status;
+    if(inp.historicoAdd && inp.historicoAdd.texto && !it.historico.some(function(h){ return h.texto===inp.historicoAdd.texto; })){
+      it.historico.push({data:inp.historicoAdd.data||agora.slice(0,10),texto:inp.historicoAdd.texto});
+    }
+    if(inp.fonteAdd && !it.fontes.some(function(f){ return f.assunto===inp.fonteAdd.assunto && f.data===inp.fonteAdd.data; })){
+      it.fontes.push(inp.fonteAdd);
+    }
+    it.atualizadoEm=agora;
+  });
+  if(payload.varredura){
+    radarData.varreduras.unshift({em:payload.varredura.em||agora,resumo:payload.varredura.resumo||'',novos:novos,atualizados:atualizados});
+    radarData.varreduras=radarData.varreduras.slice(0,30);
+    radarData.ultimaVarredura=payload.varredura.em||agora;
+  }
+  saveRadar();
+  if(radarAtivo()) renderRadar();
+  return {novos:novos,atualizados:atualizados,total:radarData.itens.length};
+}
+window.radarImport=radarImport;
+window.radarBackup=function(){ return localStorage.getItem(RADAR_KEY)||''; };
+
+function radarSetStatus(id, st){
+  var it=radarData.itens.find(function(x){ return x.id===id; }); if(!it) return;
+  it.status=st; it.atualizadoEm=new Date().toISOString();
+  it.historico.push({data:it.atualizadoEm.slice(0,10),texto:'Marcada como '+RADAR_STATUS[st].lbl.toLowerCase()+' no pmtool'});
+  saveRadar(); renderRadar();
+  toast('Pendência: '+RADAR_STATUS[st].lbl);
+}
+function radarLevarDemanda(id){
+  var it=radarData.itens.find(function(x){ return x.id===id; }); if(!it || it.demandaCodigo) return;
+  var dem=[]; try{ dem=JSON.parse(localStorage.getItem('admin_demandas_v1'))||[]; }catch(e){}
+  var seq=parseInt(localStorage.getItem('admin_demandas_seq_v1')||'0',10)+1;
+  localStorage.setItem('admin_demandas_seq_v1',String(seq));
+  var codigo=String(seq).padStart(2,'0'), agora=new Date().toISOString();
+  var fontes=it.fontes.map(function(f){ return '- '+radarFmt(f.data)+' · '+(f.remetente||'')+' — '+(f.assunto||'')+(f.anexo?' (anexo: '+f.anexo+')':''); }).join('\n');
+  dem.push({
+    id:'d_'+Date.now()+'_'+Math.random().toString(36).slice(2,8), codigo:codigo, createdAt:agora, status:'afazer',
+    nome:it.titulo, solicitante:it.responsavel||'', tipo:'Projeto', projetoNome:it.projeto||'',
+    prioridade:it.prioridade||'Média', dataSolicitacao:agora.slice(0,10), prazo:it.prazo||'',
+    observacoes:(it.detalhe||'')+(fontes?'\n\nVia Radar de Emails:\n'+fontes:''), comentarios:[], updatedAt:agora
+  });
+  localStorage.setItem('admin_demandas_v1', JSON.stringify(dem));
+  // O Demandas PMO embutido guarda a lista em memória: força recarregar para não sobrescrever.
+  var fr=document.getElementById('embedFrame'); if(fr) fr.removeAttribute('src');
+  it.demandaCodigo=codigo; it.atualizadoEm=agora;
+  it.historico.push({data:agora.slice(0,10),texto:'Levada para Demandas PMO (#'+codigo+')'});
+  if(it.status==='nova') it.status='aberta';
+  saveRadar(); renderRadar();
+  toast('Criada a demanda #'+codigo);
+}
+function radarFiltrar(campo, valor){ radarFiltro[campo]=valor; renderRadar(); }
+
+function radarCard(it){
+  var st=RADAR_STATUS[it.status]||RADAR_STATUS.aberta;
+  var meta='<span class="badge '+st.cls+'"><span class="badge-dot"></span>'+st.lbl+'</span>';
+  if(it.responsavel||it.lado) meta+='<span class="radar-chip radar-lado-'+escAttr(it.lado||'outro')+'">'+escText(RADAR_LADO[it.lado]||'')+(it.responsavel?' · '+escText(it.responsavel):'')+'</span>';
+  if(it.prazo) meta+='<span class="radar-chip">Prazo '+radarFmt(it.prazo)+'</span>';
+  if(it.prioridade==='Alta') meta+='<span class="radar-chip radar-alta">Alta</span>';
+  if(it.demandaCodigo) meta+='<span class="radar-chip radar-dem">Demanda #'+escText(it.demandaCodigo)+'</span>';
+  var hist=it.historico.slice(-3).reverse().map(function(h){
+    return '<div class="radar-hist"><b>'+radarFmt(h.data)+'</b> '+escText(h.texto)+'</div>';
+  }).join('');
+  var fontes=it.fontes.slice(-3).reverse().map(function(f){
+    var link=radarLinkSeguro(f.link);
+    var txt='✉ '+radarFmt(f.data)+' · '+escText(f.remetente||'')+' — '+escText(f.assunto||'')+(f.anexo?' <span class="radar-anexo">📎 '+escText(f.anexo)+'</span>':'');
+    return link? '<a class="radar-fonte" href="'+escAttr(link)+'" target="_blank" rel="noopener">'+txt+'</a>' : '<div class="radar-fonte">'+txt+'</div>';
+  }).join('');
+  var fechada=(it.status==='concluida'||it.status==='descartada');
+  var acoes=fechada
+    ? '<button class="btn btn-sm" onclick="radarSetStatus(\''+escAttr(it.id)+'\',\'aberta\')">Reabrir</button>'
+    : (it.demandaCodigo?'':'<button class="btn btn-sm btn-primary" onclick="radarLevarDemanda(\''+escAttr(it.id)+'\')">Levar para Demandas PMO</button>')
+      +'<button class="btn btn-sm" onclick="radarSetStatus(\''+escAttr(it.id)+'\',\'concluida\')">Concluir</button>'
+      +'<button class="btn btn-sm radar-btn-ghost" onclick="radarSetStatus(\''+escAttr(it.id)+'\',\'descartada\')">Descartar</button>';
+  return '<div class="radar-card'+(fechada?' radar-fechada':'')+(it.status==='nova'?' radar-nova':'')+'">'
+    +'<div class="radar-meta">'+meta+'</div>'
+    +'<div class="radar-titulo">'+escText(it.titulo)+'</div>'
+    +(it.detalhe?'<div class="radar-detalhe">'+escText(it.detalhe)+'</div>':'')
+    +(hist?'<div class="radar-bloco">'+hist+'</div>':'')
+    +(fontes?'<div class="radar-bloco">'+fontes+'</div>':'')
+    +'<div class="radar-acoes">'+acoes+'</div>'
+    +'</div>';
+}
+function renderRadar(){
+  var d=radarData||loadRadar();
+  document.getElementById('radar-ultima').textContent = d.ultimaVarredura
+    ? 'Última varredura: '+radarFmt(d.ultimaVarredura,true)
+    : 'Nenhuma varredura ainda';
+  var cont={nova:0,aberta:0,aguardando:0,concluida:0};
+  d.itens.forEach(function(it){ if(cont[it.status]!==undefined) cont[it.status]++; });
+  document.getElementById('radar-kpis').innerHTML=[['nova','Novas'],['aberta','Abertas'],['aguardando','Aguardando terceiro'],['concluida','Concluídas']].map(function(k){
+    return '<div class="radar-kpi"><div class="radar-kpi-n">'+cont[k[0]]+'</div><div class="radar-kpi-l">'+k[1]+'</div></div>';
+  }).join('');
+
+  var filtrosSt=[['ativas','Ativas'],['nova','Novas'],['aguardando','Aguardando terceiro'],['concluida','Concluídas'],['descartada','Descartadas'],['todas','Todas']];
+  var projetos=[]; d.itens.forEach(function(it){ if(it.projeto && projetos.indexOf(it.projeto)<0) projetos.push(it.projeto); });
+  projetos.sort();
+  var html=filtrosSt.map(function(f){
+    return '<button class="mes-btn'+(radarFiltro.status===f[0]?' active':'')+'" onclick="radarFiltrar(\'status\',\''+f[0]+'\')">'+f[1]+'</button>';
+  }).join('');
+  if(projetos.length>1){
+    html+='<span class="radar-sep"></span><button class="mes-btn'+(!radarFiltro.projeto?' active':'')+'" onclick="radarFiltrar(\'projeto\',\'\')">Todos os projetos</button>'
+      +projetos.map(function(p){ return '<button class="mes-btn'+(radarFiltro.projeto===p?' active':'')+'" onclick="radarFiltrar(\'projeto\',\''+escAttr(p).replace(/'/g,"\\'")+'\')">'+escText(p)+'</button>'; }).join('');
+  }
+  document.getElementById('radar-filtros').innerHTML=html;
+
+  var lista=d.itens.filter(function(it){
+    if(radarFiltro.projeto && it.projeto!==radarFiltro.projeto) return false;
+    if(radarFiltro.status==='todas') return true;
+    if(radarFiltro.status==='ativas') return it.status!=='concluida' && it.status!=='descartada';
+    return it.status===radarFiltro.status;
+  });
+  var grupos={};
+  lista.forEach(function(it){ var p=it.projeto||'Sem projeto'; (grupos[p]=grupos[p]||[]).push(it); });
+  var nomes=Object.keys(grupos).sort();
+  var out=nomes.map(function(p){
+    var itens=grupos[p].sort(function(a,b){ return (RADAR_ORDEM[a.status]-RADAR_ORDEM[b.status]) || (b.atualizadoEm||'').localeCompare(a.atualizadoEm||''); });
+    return '<div class="radar-grupo"><div class="sec-title"><span class="sec-title-text">'+escText(p)+'</span><span class="sec-title-desc">'+itens.length+' pendência'+(itens.length>1?'s':'')+'</span></div>'
+      +'<div class="radar-grid">'+itens.map(radarCard).join('')+'</div></div>';
+  }).join('');
+  document.getElementById('radar-lista').innerHTML=out;
+  document.getElementById('radar-empty').style.display=out?'none':'block';
+
+  document.getElementById('radar-log').innerHTML=d.varreduras.slice(0,8).map(function(v){
+    return '<div class="radar-log-item"><b>'+radarFmt(v.em,true)+'</b> · '+v.novos+' nova'+(v.novos===1?'':'s')+', '+v.atualizados+' atualizada'+(v.atualizados===1?'':'s')+(v.resumo?' — '+escText(v.resumo):'')+'</div>';
+  }).join('') || '<div class="radar-log-item">Ainda não houve varredura.</div>';
+}
 </script>
 </body>
 </html>
