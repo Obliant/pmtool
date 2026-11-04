@@ -4604,7 +4604,7 @@ function radarLevarDemanda(id){
     id:'d_'+Date.now()+'_'+Math.random().toString(36).slice(2,8), codigo:codigo, createdAt:agora, status:'afazer',
     nome:it.titulo, solicitante:'', tipo:'Projeto', projetoNome:it.projeto||'',
     prioridade:it.prioridade||'Média', dataSolicitacao:agora.slice(0,10), prazo:it.prazo||'',
-    observacoes:(it.assunto?'Assunto: '+it.assunto+'\n':'')+(it.responsavel?'Responsável: '+it.responsavel+'\n':'')+(it.tratarCom?'Tratar com: '+it.tratarCom+'\n':'')+(it.detalhe||'')+(fontes?'\n\nVia Radar de Emails:\n'+fontes:''), comentarios:[], updatedAt:agora
+    observacoes:(it.assunto?'Assunto: '+it.assunto+'\n':'')+(it.responsavel?'Responsável: '+it.responsavel+'\n':'')+(it.tratarCom?'Tratar com: '+it.tratarCom+'\n':'')+(it.detalhe||'')+((it.subitens||[]).length?'\n\nFrentes:\n'+it.subitens.map(function(s){ return (s.feito?'[x] ':'[ ] ')+s.texto+(s.tratarCom?' (tratar com '+s.tratarCom+')':''); }).join('\n'):'')+(fontes?'\n\nVia Radar de Emails:\n'+fontes:''), comentarios:[], updatedAt:agora
   });
   localStorage.setItem('admin_demandas_v1', JSON.stringify(dem));
   // O Demandas PMO embutido guarda a lista em memória: força recarregar para não sobrescrever.
