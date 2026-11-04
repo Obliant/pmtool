@@ -366,6 +366,28 @@ a.radar-fonte:hover{color:var(--blue);text-decoration:underline}
 .radar-btn-ghost{border-color:transparent;color:var(--text3)}
 .radar-log-item{font-size:12px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
 .radar-log-item:last-child{border-bottom:0}
+.radar-chk{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:var(--rl);padding:16px 18px;margin-bottom:20px;display:flex;flex-direction:column;gap:10px}
+.radar-chk-top{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between}
+.radar-chk-titulo{font-size:15px;font-weight:600}
+.radar-chk-desc{font-size:12px;color:var(--text2)}
+.radar-chk-num{font-size:13px;color:var(--text2)}
+.radar-chk-num b{color:var(--text);font-weight:600}
+.radar-chk-barra{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.radar-chk-barra div{height:100%;background:var(--accent)}
+.radar-chk-filtros{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.radar-chk-frente{border-top:1px solid var(--border);padding-top:8px}
+.radar-chk-frente summary{font-size:13px;font-weight:600;cursor:pointer}
+.radar-chk-frente summary span{font-weight:400;color:var(--text2);margin-left:6px}
+.radar-chk-item{display:grid;grid-template-columns:20px 44px 1fr;gap:4px 8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start}
+.radar-chk-item:last-child{border-bottom:0}
+.radar-chk-item input{margin-top:3px;cursor:pointer}
+.radar-chk-id{font-size:11px;font-weight:600;color:var(--text3);padding-top:2px}
+.radar-chk-acao{font-size:13px;line-height:1.4}
+.radar-chk-ok .radar-chk-acao{color:var(--text3);text-decoration:line-through}
+.radar-chk-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.radar-chk-parcial{color:var(--warn);font-weight:600}
+.radar-chk-ret{font-size:12px;color:var(--text);line-height:1.45;margin-top:4px;padding-left:8px;border-left:2px solid var(--accent);display:block;text-decoration:none}
+a.radar-chk-ret:hover{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -495,6 +517,7 @@ a.radar-fonte:hover{color:var(--blue);text-decoration:underline}
         <div id="radar-ultima" style="font-size:12px;color:var(--text2)"></div>
       </div>
       <div class="radar-kpis" id="radar-kpis"></div>
+      <div id="radar-checklist"></div>
       <div id="radar-filtros" class="mes-tab"></div>
       <div id="radar-lista"></div>
       <div id="radar-empty" class="empty-state" style="display:none">
@@ -4478,11 +4501,12 @@ var RADAR_STATUS={
   aguardando:{lbl:'Aguardando terceiro',cls:'badge-progress'},
   concluida:{lbl:'Concluída',cls:'badge-ok'},
   descartada:{lbl:'Descartada',cls:'radar-badge-off'},
-  levada:{lbl:'Levada ao PMO',cls:'radar-badge-off'}
+  levada:{lbl:'Levada ao PMO',cls:'radar-badge-off'},
+  consolidada:{lbl:'No cartão único',cls:'radar-badge-off'}
 };
-var RADAR_ORDEM={nova:0,aberta:1,aguardando:2,concluida:3,descartada:4,levada:5};
+var RADAR_ORDEM={nova:0,aberta:1,aguardando:2,concluida:3,descartada:4,levada:5,consolidada:6};
 // Fechadas pela pessoa: saem da lista de ativas e a varredura não reabre sozinha.
-function radarTravada(st){ return st==='descartada' || st==='levada'; }
+function radarTravada(st){ return st==='descartada' || st==='levada' || st==='consolidada'; }
 var RADAR_LADO={obliant:'Obliant',cliente:'Cliente',totvs:'TOTVS',outro:'Outro'};
 
 function loadRadar(){
@@ -4581,6 +4605,107 @@ function radarLevarDemanda(id){
 }
 function radarFiltrar(campo, valor){ radarFiltro[campo]=valor; renderRadar(); }
 
+// ─── CARTÃO ÚNICO: checklist de um relatório do cliente, ticado conforme chegam os retornos ──
+// Os itens ficam só no localStorage (dentro de pt_radar_email_v1, campo checklist): nada do cliente vai para o código.
+var RADAR_CHK_EST={aberto:0,parcial:1,resolvido:2,atendido:3};
+var radarChkUI={filtro:'pendentes',dono:'',abertos:{}};
+// payload = { relatorio:{titulo,projeto,descricao}, itens:[{id,frente,acao,responsavel,dono,origem,estado,evidencia,retornoAdd:{data,remetente,assunto,texto,link}}] }
+// Para atualizar um item basta {id,estado,retornoAdd}. A varredura só avança o estado e não mexe no que a pessoa marcou à mão.
+function radarChecklist(payload){
+  radarData=loadRadar();
+  var c=radarData.checklist;
+  if(payload.relatorio){
+    if(!c) c=radarData.checklist={itens:[]};
+    ['titulo','projeto','descricao'].forEach(function(k){ if(payload.relatorio[k]!==undefined) c[k]=payload.relatorio[k]; });
+  }
+  if(!c) return {erro:'Checklist ainda não carregado'};
+  var novos=0, atualizados=0, ignorados=[];
+  (payload.itens||[]).forEach(function(inp){
+    if(!inp || !inp.id) return;
+    var it=c.itens.find(function(x){ return x.id===inp.id; });
+    if(!it){
+      if(!inp.acao){ ignorados.push(inp.id); return; }
+      it={id:inp.id,frente:'',acao:'',responsavel:'',dono:'',origem:'',estado:'aberto',evidencia:'',retornos:[]};
+      c.itens.push(it); novos++;
+    } else atualizados++;
+    ['frente','acao','responsavel','dono','origem','evidencia'].forEach(function(k){ if(inp[k]!==undefined) it[k]=inp[k]; });
+    if(RADAR_CHK_EST[inp.estado]!==undefined && !it.manual && RADAR_CHK_EST[inp.estado]>=RADAR_CHK_EST[it.estado]) it.estado=inp.estado;
+    var r=inp.retornoAdd;
+    if(r && r.texto && !it.retornos.some(function(x){ return x.texto===r.texto && x.data===r.data; })) it.retornos.push(r);
+  });
+  saveRadar();
+  if(radarAtivo()) renderRadar();
+  return {novos:novos,atualizados:atualizados,ignorados:ignorados,total:c.itens.length};
+}
+window.radarChecklist=radarChecklist;
+function radarChkMarcar(id, marcado){
+  radarData=loadRadar();
+  var c=radarData.checklist; if(!c) return;
+  var it=c.itens.find(function(x){ return x.id===id; }); if(!it) return;
+  it.estado=marcado?'resolvido':(it.retornos.length?'parcial':'aberto');
+  it.manual=true;
+  it.retornos.push({data:new Date().toISOString().slice(0,10),texto:(marcado?'Marcado como resolvido':'Reaberto')+' no pmtool'});
+  saveRadar(); renderRadar();
+}
+function radarChkFiltrar(campo, valor){ radarChkUI[campo]=valor; renderRadar(); }
+function radarChkAbrir(el){ radarChkUI.abertos[el.dataset.f]=el.open; }
+function radarChkFeito(it){ return it.estado==='resolvido' || it.estado==='atendido'; }
+function radarChkItem(it){
+  var feito=radarChkFeito(it);
+  var sub=[];
+  if(it.estado==='parcial') sub.push('<span class="radar-chk-parcial">Parcial</span>');
+  if(it.estado==='atendido') sub.push('Atendido no relatório');
+  if(it.responsavel) sub.push(escText(it.responsavel));
+  if(it.origem) sub.push('origem '+escText(it.origem));
+  if(it.evidencia) sub.push(escText(it.evidencia));
+  var rets=it.retornos.map(function(r){
+    var link=radarLinkSeguro(r.link);
+    var txt='<b>'+radarFmt(r.data)+'</b> '+(r.remetente?escText(r.remetente)+': ':'')+escText(r.texto);
+    return link? '<a class="radar-chk-ret" href="'+escAttr(link)+'" target="_blank" rel="noopener">✉ '+txt+'</a>' : '<div class="radar-chk-ret">'+txt+'</div>';
+  }).join('');
+  return '<div class="radar-chk-item'+(feito?' radar-chk-ok':'')+'">'
+    +'<input type="checkbox" aria-label="Item '+escAttr(it.id)+' resolvido"'+(feito?' checked':'')+' onchange="radarChkMarcar(\''+escAttr(it.id)+'\',this.checked)">'
+    +'<div class="radar-chk-id">'+escText(it.id)+'</div>'
+    +'<div><div class="radar-chk-acao">'+escText(it.acao)+'</div><div class="radar-chk-sub">'+sub.join(' · ')+'</div>'+rets+'</div>'
+    +'</div>';
+}
+function radarChkHtml(c){
+  var ui=radarChkUI, itens=c.itens;
+  var feitos=itens.filter(radarChkFeito).length;
+  var parciais=itens.filter(function(i){ return i.estado==='parcial'; }).length;
+  var comRetorno=itens.filter(function(i){ return i.retornos.length; }).length;
+  var pct=itens.length? Math.round(feitos*100/itens.length) : 0;
+  var donos={}; itens.forEach(function(i){ if(!radarChkFeito(i)){ var k=i.dono||'A definir'; donos[k]=(donos[k]||0)+1; } });
+  var filtros=[['pendentes','Pendentes ('+(itens.length-feitos)+')'],['retorno','Com retorno ('+comRetorno+')'],['feitos','Resolvidos ('+feitos+')'],['todos','Todos ('+itens.length+')']].map(function(f){
+    return '<button class="mes-btn'+(ui.filtro===f[0]?' active':'')+'" onclick="radarChkFiltrar(\'filtro\',\''+f[0]+'\')">'+f[1]+'</button>';
+  }).join('');
+  filtros+='<span class="radar-sep"></span><button class="mes-btn'+(!ui.dono?' active':'')+'" onclick="radarChkFiltrar(\'dono\',\'\')">Todos</button>'
+    +Object.keys(donos).sort(function(a,b){ return donos[b]-donos[a]; }).map(function(k){
+      return '<button class="mes-btn'+(ui.dono===k?' active':'')+'" data-d="'+escAttr(k)+'" onclick="radarChkFiltrar(\'dono\',this.dataset.d)">'+escText(k)+' ('+donos[k]+')</button>';
+    }).join('');
+  var lista=itens.filter(function(i){
+    if(ui.dono && (i.dono||'A definir')!==ui.dono) return false;
+    if(ui.filtro==='pendentes') return !radarChkFeito(i);
+    if(ui.filtro==='feitos') return radarChkFeito(i);
+    if(ui.filtro==='retorno') return i.retornos.length>0;
+    return true;
+  });
+  var ordem=[], grupos={};
+  lista.forEach(function(i){ var f=i.frente||'Outros'; if(!grupos[f]){ grupos[f]=[]; ordem.push(f); } grupos[f].push(i); });
+  var corpo=ordem.map(function(f){
+    var aberto=ui.filtro==='retorno' || ui.abertos[f];
+    return '<details class="radar-chk-frente" data-f="'+escAttr(f)+'" ontoggle="radarChkAbrir(this)"'+(aberto?' open':'')+'><summary>'+escText(f)+'<span>'+grupos[f].length+' item'+(grupos[f].length>1?'s':'')+'</span></summary>'
+      +grupos[f].map(radarChkItem).join('')+'</details>';
+  }).join('');
+  return '<div class="radar-chk">'
+    +'<div class="radar-chk-top"><div><div class="radar-chk-titulo">'+escText((c.projeto?c.projeto+' · ':'')+(c.titulo||'Checklist'))+'</div><div class="radar-chk-desc">'+escText(c.descricao||'')+'</div></div>'
+    +'<div class="radar-chk-num"><b>'+feitos+' de '+itens.length+'</b> resolvidos ('+pct+'%) · '+parciais+' parcia'+(parciais===1?'l':'is')+'</div></div>'
+    +'<div class="radar-chk-barra"><div style="width:'+pct+'%"></div></div>'
+    +'<div class="radar-chk-filtros">'+filtros+'</div>'
+    +(corpo||'<div class="radar-chk-desc">Nenhum item neste filtro.</div>')
+    +'</div>';
+}
+
 function radarCard(it){
   var st=RADAR_STATUS[it.status]||RADAR_STATUS.aberta;
   var meta='<span class="badge '+st.cls+'"><span class="badge-dot"></span>'+st.lbl+'</span>';
@@ -4628,7 +4753,9 @@ function renderRadar(){
     return '<div class="radar-kpi"><div class="radar-kpi-n">'+cont[k[0]]+'</div><div class="radar-kpi-l">'+k[1]+'</div></div>';
   }).join('');
 
-  var filtrosSt=[['ativas','Ativas'],['nova','Novas'],['aguardando','Aguardando terceiro'],['concluida','Concluídas'],['levada','Levadas ao PMO'],['descartada','Descartadas'],['todas','Todas']];
+  document.getElementById('radar-checklist').innerHTML=d.checklist? radarChkHtml(d.checklist) : '';
+
+  var filtrosSt=[['ativas','Ativas'],['nova','Novas'],['aguardando','Aguardando terceiro'],['concluida','Concluídas'],['levada','Levadas ao PMO'],['consolidada','No cartão único'],['descartada','Descartadas'],['todas','Todas']];
   var projetos=[]; d.itens.forEach(function(it){ if(it.projeto && projetos.indexOf(it.projeto)<0) projetos.push(it.projeto); });
   projetos.sort();
   var html=filtrosSt.map(function(f){
