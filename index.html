@@ -366,6 +366,9 @@ a.radar-fonte:hover{color:var(--blue);text-decoration:underline}
 .radar-btn-ghost{border-color:transparent;color:var(--text3)}
 .radar-log-item{font-size:12px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
 .radar-log-item:last-child{border-bottom:0}
+.radar-card-larga{grid-column:1/-1}
+.radar-subs{border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column}
+.radar-sub{grid-template-columns:20px 1fr}
 .radar-chk{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:var(--rl);padding:16px 18px;margin-bottom:20px;display:flex;flex-direction:column;gap:10px}
 .radar-chk-top{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between}
 .radar-chk-titulo{font-size:15px;font-weight:600}
@@ -4556,6 +4559,15 @@ function radarImport(payload){
     if(inp.fonteAdd && !it.fontes.some(function(f){ return f.assunto===inp.fonteAdd.assunto && f.data===inp.fonteAdd.data; })){
       it.fontes.push(inp.fonteAdd);
     }
+    // Um cartão por assunto: as frentes do assunto entram como subitens. subAdd cria ou atualiza pelo id.
+    (inp.subAdd||[]).forEach(function(s){
+      if(!s || !s.id) return;
+      if(!it.subitens) it.subitens=[];
+      var sub=it.subitens.find(function(x){ return x.id===s.id; });
+      if(!sub){ if(!s.texto) return; sub={id:s.id,texto:'',tratarCom:'',detalhe:'',feito:false}; it.subitens.push(sub); }
+      ['texto','tratarCom','detalhe'].forEach(function(k){ if(s[k]!==undefined) sub[k]=s[k]; });
+      if(s.feito!==undefined && !sub.manual) sub.feito=!!s.feito;
+    });
     it.atualizadoEm=agora;
   });
   if(payload.varredura){
@@ -4706,17 +4718,38 @@ function radarChkHtml(c){
     +'</div>';
 }
 
+function radarSubMarcar(id, subId, marcado){
+  radarData=loadRadar();
+  var it=radarData.itens.find(function(x){ return x.id===id; }); if(!it) return;
+  var sub=(it.subitens||[]).find(function(x){ return x.id===subId; }); if(!sub) return;
+  sub.feito=marcado; sub.manual=true; it.atualizadoEm=new Date().toISOString();
+  saveRadar(); renderRadar();
+}
+function radarSubHtml(it){
+  var subs=it.subitens||[]; if(!subs.length) return '';
+  var feitos=subs.filter(function(s){ return s.feito; }).length;
+  return '<div class="radar-subs"><div class="radar-rotulo">Frentes · '+feitos+' de '+subs.length+' feitas</div>'
+    +subs.map(function(s){
+      return '<div class="radar-chk-item radar-sub'+(s.feito?' radar-chk-ok':'')+'">'
+        +'<input type="checkbox" aria-label="Frente feita"'+(s.feito?' checked':'')+' onchange="radarSubMarcar(\''+escAttr(it.id)+'\',\''+escAttr(s.id)+'\',this.checked)">'
+        +'<div><div class="radar-chk-acao">'+escText(s.texto)+'</div>'
+        +(s.tratarCom?'<div class="radar-chk-sub">Tratar com '+escText(s.tratarCom)+'</div>':'')
+        +(s.detalhe?'<details class="radar-mais"><summary>Detalhes</summary><div class="radar-detalhe">'+escText(s.detalhe)+'</div></details>':'')
+        +'</div></div>';
+    }).join('')+'</div>';
+}
 function radarCard(it){
   var st=RADAR_STATUS[it.status]||RADAR_STATUS.aberta;
+  var temSubs=it.subitens && it.subitens.length;
   var meta='<span class="badge '+st.cls+'"><span class="badge-dot"></span>'+st.lbl+'</span>';
   if(it.responsavel||it.lado) meta+='<span class="radar-chip radar-lado-'+escAttr(it.lado||'outro')+'">'+escText(RADAR_LADO[it.lado]||'')+(it.responsavel?' · '+escText(it.responsavel):'')+'</span>';
   if(it.prazo) meta+='<span class="radar-chip">Prazo '+radarFmt(it.prazo)+'</span>';
   if(it.prioridade==='Alta') meta+='<span class="radar-chip radar-alta">Alta</span>';
   if(it.demandaCodigo) meta+='<span class="radar-chip radar-dem">Demanda #'+escText(it.demandaCodigo)+'</span>';
-  var hist=it.historico.slice(-3).reverse().map(function(h){
+  var hist=it.historico.slice(temSubs?-10:-3).reverse().map(function(h){
     return '<div class="radar-hist"><b>'+radarFmt(h.data)+'</b> '+escText(h.texto)+'</div>';
   }).join('');
-  var fontes=it.fontes.slice(-3).reverse().map(function(f){
+  var fontes=it.fontes.slice(temSubs?-15:-3).reverse().map(function(f){
     var link=radarLinkSeguro(f.link);
     var txt='✉ '+radarFmt(f.data)+' · '+escText(f.remetente||'')+' — '+escText(f.assunto||'')+(f.anexo?' <span class="radar-anexo">📎 '+escText(f.anexo)+'</span>':'');
     return link? '<a class="radar-fonte" href="'+escAttr(link)+'" target="_blank" rel="noopener">'+txt+'</a>' : '<div class="radar-fonte">'+txt+'</div>';
@@ -4727,13 +4760,14 @@ function radarCard(it){
     : (it.demandaCodigo?'':'<button class="btn btn-sm btn-primary" onclick="radarLevarDemanda(\''+escAttr(it.id)+'\')">Levar para Demandas PMO</button>')
       +'<button class="btn btn-sm" onclick="radarSetStatus(\''+escAttr(it.id)+'\',\'concluida\')">Concluir</button>'
       +'<button class="btn btn-sm radar-btn-ghost" onclick="radarSetStatus(\''+escAttr(it.id)+'\',\'descartada\')">Descartar</button>';
-  return '<div class="radar-card'+(fechada?' radar-fechada':'')+(it.status==='nova'?' radar-nova':'')+'">'
+  return '<div class="radar-card'+(fechada?' radar-fechada':'')+(it.status==='nova'?' radar-nova':'')+(temSubs?' radar-card-larga':'')+'">'
     +'<div class="radar-meta">'+meta+'</div>'
     +'<div class="radar-campos">'
     +(it.assunto?'<div class="radar-rotulo">Assunto</div><div class="radar-valor">'+escText(it.assunto)+'</div>':'')
     +'<div class="radar-rotulo">Pendência</div><div class="radar-valor radar-titulo">'+escText(it.titulo)+'</div>'
     +(it.tratarCom?'<div class="radar-rotulo">Tratar com</div><div class="radar-valor radar-tratar">'+escText(it.tratarCom)+'</div>':'')
     +'</div>'
+    +radarSubHtml(it)
     +((it.detalhe||hist||fontes)?'<details class="radar-mais"><summary>Detalhes e emails</summary>'
       +(it.detalhe?'<div class="radar-detalhe">'+escText(it.detalhe)+'</div>':'')
       +(hist?'<div class="radar-bloco">'+hist+'</div>':'')
